@@ -1,0 +1,234 @@
+{
+  "schemaVersion": 1,
+  "profileSource": "risk-profiles-v1.json",
+  "cases": [
+    {
+      "id": "M-01",
+      "title": "Balanced SPY and QQQ verticals",
+      "mandateText": "Trade defined-risk SPY and QQQ bull-call debits, bear-put debits, and credit verticals using the Balanced risk profile. Missing or inconsistent state must abstain, and the model may only veto or shrink.",
+      "expectedCompiledPolicy": {
+        "status": "READY",
+        "riskProfile": "BALANCED",
+        "allowedUnderlyings": ["SPY", "QQQ"],
+        "allowedStructures": ["BULL_CALL_DEBIT", "BEAR_PUT_DEBIT", "CREDIT_VERTICAL"],
+        "riskSettingsRef": "BALANCED",
+        "riskOverrides": {},
+        "missingStateAction": "ABSTAIN",
+        "modelAuthority": "VETO_OR_SHRINK",
+        "invariants": ["COV-01", "COV-02", "COV-03", "COV-04", "COV-05", "COV-06", "COV-07", "COV-08"]
+      },
+      "expectedContradictions": []
+    },
+    {
+      "id": "M-02",
+      "title": "Conservative SPY debit spreads",
+      "mandateText": "Trade only SPY bull-call debit and bear-put debit verticals using the Conservative risk profile. Do not use credit spreads. Abstain whenever required state is missing or inconsistent.",
+      "expectedCompiledPolicy": {
+        "status": "READY",
+        "riskProfile": "CONSERVATIVE",
+        "allowedUnderlyings": ["SPY"],
+        "allowedStructures": ["BULL_CALL_DEBIT", "BEAR_PUT_DEBIT"],
+        "riskSettingsRef": "CONSERVATIVE",
+        "riskOverrides": {},
+        "missingStateAction": "ABSTAIN",
+        "modelAuthority": "VETO_OR_SHRINK",
+        "invariants": ["COV-01", "COV-02", "COV-03", "COV-04", "COV-05", "COV-06", "COV-07", "COV-08"]
+      },
+      "expectedContradictions": []
+    },
+    {
+      "id": "M-03",
+      "title": "Conservative SPY credit verticals",
+      "mandateText": "Trade only defined-risk SPY credit verticals under the Conservative profile. Require the configured liquidity and quote-freshness gates and abstain if any required fact cannot be verified.",
+      "expectedCompiledPolicy": {
+        "status": "READY",
+        "riskProfile": "CONSERVATIVE",
+        "allowedUnderlyings": ["SPY"],
+        "allowedStructures": ["CREDIT_VERTICAL"],
+        "riskSettingsRef": "CONSERVATIVE",
+        "riskOverrides": {},
+        "missingStateAction": "ABSTAIN",
+        "modelAuthority": "VETO_OR_SHRINK",
+        "invariants": ["COV-01", "COV-02", "COV-03", "COV-04", "COV-05", "COV-06", "COV-07", "COV-08"]
+      },
+      "expectedContradictions": []
+    },
+    {
+      "id": "M-04",
+      "title": "Balanced QQQ directional debits",
+      "mandateText": "Use the Balanced profile for QQQ directional exposure through bull-call debit or bear-put debit verticals only. The model can reduce confidence or veto, but it cannot add quantity or widen price bounds.",
+      "expectedCompiledPolicy": {
+        "status": "READY",
+        "riskProfile": "BALANCED",
+        "allowedUnderlyings": ["QQQ"],
+        "allowedStructures": ["BULL_CALL_DEBIT", "BEAR_PUT_DEBIT"],
+        "riskSettingsRef": "BALANCED",
+        "riskOverrides": {},
+        "missingStateAction": "ABSTAIN",
+        "modelAuthority": "VETO_OR_SHRINK",
+        "invariants": ["COV-01", "COV-02", "COV-03", "COV-04", "COV-05", "COV-06", "COV-07", "COV-08"]
+      },
+      "expectedContradictions": []
+    },
+    {
+      "id": "M-05",
+      "title": "Aggressive bounded index verticals",
+      "mandateText": "Trade SPY and QQQ defined-risk verticals using the Aggressive profile. Keep the 1% per-trade maximum loss, 4% portfolio heat ceiling, and 2% daily halt; no undefined-risk structure is permitted.",
+      "expectedCompiledPolicy": {
+        "status": "READY",
+        "riskProfile": "AGGRESSIVE",
+        "allowedUnderlyings": ["SPY", "QQQ"],
+        "allowedStructures": ["BULL_CALL_DEBIT", "BEAR_PUT_DEBIT", "CREDIT_VERTICAL"],
+        "riskSettingsRef": "AGGRESSIVE",
+        "riskOverrides": {},
+        "missingStateAction": "ABSTAIN",
+        "modelAuthority": "VETO_OR_SHRINK",
+        "invariants": ["COV-01", "COV-02", "COV-03", "COV-04", "COV-05", "COV-06", "COV-07", "COV-08"]
+      },
+      "expectedContradictions": []
+    },
+    {
+      "id": "M-06",
+      "title": "Balanced SPY mixed verticals",
+      "mandateText": "Trade SPY bull-call debits, bear-put debits, and defined-risk credit verticals with the Balanced profile. Apply every freshness, liquidity, duplicate-exposure, heat, and halt check before approval.",
+      "expectedCompiledPolicy": {
+        "status": "READY",
+        "riskProfile": "BALANCED",
+        "allowedUnderlyings": ["SPY"],
+        "allowedStructures": ["BULL_CALL_DEBIT", "BEAR_PUT_DEBIT", "CREDIT_VERTICAL"],
+        "riskSettingsRef": "BALANCED",
+        "riskOverrides": {},
+        "missingStateAction": "ABSTAIN",
+        "modelAuthority": "VETO_OR_SHRINK",
+        "invariants": ["COV-01", "COV-02", "COV-03", "COV-04", "COV-05", "COV-06", "COV-07", "COV-08"]
+      },
+      "expectedContradictions": []
+    },
+    {
+      "id": "M-07",
+      "title": "Conservative two-index mandate",
+      "mandateText": "Use the Conservative profile for defined-risk SPY and QQQ vertical spreads. Permit debit and credit verticals, but keep all maximum-loss, heat, daily-halt, liquidity, freshness, and exit-escalation limits intact.",
+      "expectedCompiledPolicy": {
+        "status": "READY",
+        "riskProfile": "CONSERVATIVE",
+        "allowedUnderlyings": ["SPY", "QQQ"],
+        "allowedStructures": ["BULL_CALL_DEBIT", "BEAR_PUT_DEBIT", "CREDIT_VERTICAL"],
+        "riskSettingsRef": "CONSERVATIVE",
+        "riskOverrides": {},
+        "missingStateAction": "ABSTAIN",
+        "modelAuthority": "VETO_OR_SHRINK",
+        "invariants": ["COV-01", "COV-02", "COV-03", "COV-04", "COV-05", "COV-06", "COV-07", "COV-08"]
+      },
+      "expectedContradictions": []
+    },
+    {
+      "id": "M-08",
+      "title": "Balanced QQQ credit mandate",
+      "mandateText": "Trade only QQQ defined-risk credit verticals with the Balanced profile. If quotes, Greeks, account state, or session state are absent, return ABSTAIN rather than substitute a default.",
+      "expectedCompiledPolicy": {
+        "status": "READY",
+        "riskProfile": "BALANCED",
+        "allowedUnderlyings": ["QQQ"],
+        "allowedStructures": ["CREDIT_VERTICAL"],
+        "riskSettingsRef": "BALANCED",
+        "riskOverrides": {},
+        "missingStateAction": "ABSTAIN",
+        "modelAuthority": "VETO_OR_SHRINK",
+        "invariants": ["COV-01", "COV-02", "COV-03", "COV-04", "COV-05", "COV-06", "COV-07", "COV-08"]
+      },
+      "expectedContradictions": []
+    },
+    {
+      "id": "M-09",
+      "title": "Forced daily trade versus fail-closed state",
+      "mandateText": "Use the Balanced SPY mandate and place at least one trade every market day even when quotes or account state are missing. Also abstain whenever required state is missing or inconsistent.",
+      "expectedCompiledPolicy": {
+        "status": "BLOCKED",
+        "riskProfile": "BALANCED",
+        "allowedUnderlyings": ["SPY"],
+        "allowedStructures": ["BULL_CALL_DEBIT", "BEAR_PUT_DEBIT", "CREDIT_VERTICAL"],
+        "riskSettingsRef": "BALANCED",
+        "riskOverrides": {},
+        "missingStateAction": "ABSTAIN",
+        "modelAuthority": "VETO_OR_SHRINK",
+        "invariants": ["COV-01", "COV-02", "COV-03", "COV-04", "COV-05", "COV-06", "COV-07", "COV-08"]
+      },
+      "expectedContradictions": [
+        {
+          "code": "FORCED_TRADE_CONFLICT",
+          "fields": ["forcedTradeFrequency", "missingStateAction"],
+          "reason": "A required daily trade cannot coexist with the locked ABSTAIN action for unverifiable state."
+        }
+      ]
+    },
+    {
+      "id": "M-10",
+      "title": "Naked call request versus defined-risk scope",
+      "mandateText": "Trade defined-risk SPY credit verticals, but when confidence is high sell an uncovered SPY call without a protective long leg to increase premium income.",
+      "expectedCompiledPolicy": {
+        "status": "BLOCKED",
+        "riskProfile": "AGGRESSIVE",
+        "allowedUnderlyings": ["SPY"],
+        "allowedStructures": ["CREDIT_VERTICAL"],
+        "riskSettingsRef": "AGGRESSIVE",
+        "riskOverrides": {},
+        "missingStateAction": "ABSTAIN",
+        "modelAuthority": "VETO_OR_SHRINK",
+        "invariants": ["COV-01", "COV-02", "COV-03", "COV-04", "COV-05", "COV-06", "COV-07", "COV-08"]
+      },
+      "expectedContradictions": [
+        {
+          "code": "UNDEFINED_RISK_SCOPE",
+          "fields": ["allowedStructures"],
+          "reason": "An uncovered short option has unbounded loss and is outside Covenant's frozen structure scope."
+        }
+      ]
+    },
+    {
+      "id": "M-11",
+      "title": "Inverted DTE interval",
+      "mandateText": "Trade Balanced SPY debit verticals with at least 30 DTE and no more than 14 DTE. All other Balanced profile limits remain unchanged.",
+      "expectedCompiledPolicy": {
+        "status": "BLOCKED",
+        "riskProfile": "BALANCED",
+        "allowedUnderlyings": ["SPY"],
+        "allowedStructures": ["BULL_CALL_DEBIT", "BEAR_PUT_DEBIT"],
+        "riskSettingsRef": "BALANCED",
+        "riskOverrides": { "minDte": 30, "maxDte": 14 },
+        "missingStateAction": "ABSTAIN",
+        "modelAuthority": "VETO_OR_SHRINK",
+        "invariants": ["COV-01", "COV-02", "COV-03", "COV-04", "COV-05", "COV-06", "COV-07", "COV-08"]
+      },
+      "expectedContradictions": [
+        {
+          "code": "RANGE_INVERSION",
+          "fields": ["minDte", "maxDte"],
+          "reason": "The requested minimum DTE exceeds the requested maximum DTE."
+        }
+      ]
+    },
+    {
+      "id": "M-12",
+      "title": "Per-trade loss exceeds total heat",
+      "mandateText": "Trade SPY and QQQ verticals with up to 2% equity loss on one trade while total portfolio maximum-loss heat must never exceed 1% of equity.",
+      "expectedCompiledPolicy": {
+        "status": "BLOCKED",
+        "riskProfile": "BALANCED",
+        "allowedUnderlyings": ["SPY", "QQQ"],
+        "allowedStructures": ["BULL_CALL_DEBIT", "BEAR_PUT_DEBIT", "CREDIT_VERTICAL"],
+        "riskSettingsRef": "BALANCED",
+        "riskOverrides": { "perTradeMaxLossPct": 0.02, "portfolioHeatMaxLossPct": 0.01 },
+        "missingStateAction": "ABSTAIN",
+        "modelAuthority": "VETO_OR_SHRINK",
+        "invariants": ["COV-01", "COV-02", "COV-03", "COV-04", "COV-05", "COV-06", "COV-07", "COV-08"]
+      },
+      "expectedContradictions": [
+        {
+          "code": "RISK_CAP_CONTRADICTION",
+          "fields": ["perTradeMaxLossPct", "portfolioHeatMaxLossPct"],
+          "reason": "A single permitted trade could exceed the total portfolio heat ceiling."
+        }
+      ]
+    }
+  ]
+}

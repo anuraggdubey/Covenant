@@ -10,6 +10,7 @@ import { generateCandidates } from "./factory";
 import { analyzeMarketSignals } from "./signals";
 import { rankAndSizeCandidates } from "./ranking";
 import { sha256Canonical } from "./canonical";
+import type { AlpacaBar } from "@/lib/alpaca/types";
 
 /**
  * Alpha Engine proposal entry point.
@@ -26,6 +27,8 @@ export async function propose(
   options?: {
     modelConfidenceMultiplier?: number;
     intentTtlSeconds?: number;
+    bars?: AlpacaBar[];
+    chainIvAverage?: number;
   }
 ): Promise<{ intent: TradeIntent } | { abstain: true; reason: string }> {
   // 1. Verify Snapshot Authenticity & Hashes
@@ -74,6 +77,14 @@ export async function propose(
     };
   }
 
+  const dailyPnl = new Decimal(account.dailyRealizedPnl).plus(account.dailyUnrealizedPnl);
+  if (dailyPnl.dividedBy(equityDec).lessThanOrEqualTo(policy.dailyHaltPct)) {
+    return {
+      abstain: true,
+      reason: `[FAIL-CLOSED] Daily P&L has reached the policy halt threshold (${policy.dailyHaltPct}).`,
+    };
+  }
+
   // 4. Generate candidate vertical spreads
   const candidates = generateCandidates(market, policy, 1);
   if (candidates.length === 0) {
@@ -84,7 +95,10 @@ export async function propose(
   }
 
   // 5. Signals Analysis
-  const signals = analyzeMarketSignals([], undefined);
+  const signals = analyzeMarketSignals(options?.bars ?? [], options?.chainIvAverage);
+  if (!signals.usable) {
+    return { abstain: true, reason: `[FAIL-CLOSED] ${signals.summary}` };
+  }
 
   // 6. Rank and size candidates
   const modelConfidence = options?.modelConfidenceMultiplier ?? 1.0;
@@ -93,6 +107,7 @@ export async function propose(
     policy,
     account,
     signals,
+    market.underlyingPrice,
     modelConfidence
   );
 
@@ -111,11 +126,18 @@ export async function propose(
 
   // Construct limit price band (+/- 5% or minimum $0.05)
   const limitPriceDec = new Decimal(topPick.finalPayoff.limitPrice);
-  const bandOffset = Decimal.max(limitPriceDec.times("0.05"), "0.05");
-  const minPrice = Decimal.max(limitPriceDec.minus(bandOffset), "0.01").toFixed(2);
+  const bandOffset = Decimal.max(limitPriceDec.abs().times("0.05"), "0.05");
+  const minPrice = limitPriceDec.minus(bandOffset).toFixed(2);
   const maxPrice = limitPriceDec.plus(bandOffset).toFixed(2);
 
-  const intentId = `intent_${market.underlying}_${now.getTime()}_${Math.random().toString(36).slice(2, 8)}`;
+  const intentIdSeed = sha256Canonical({
+    policyHash: policy.policyHash,
+    marketSnapshotHash: market.snapshotHash,
+    accountSnapshotHash: account.snapshotHash,
+    candidateId: topPick.candidate.id,
+    createdAt,
+  });
+  const intentId = `intent_${market.underlying}_${intentIdSeed.slice(0, 16)}`;
 
   const unsignedIntent: Omit<TradeIntent, "intentHash"> = {
     id: intentId,

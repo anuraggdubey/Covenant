@@ -27,41 +27,55 @@ export function buildMarketSnapshot(
   const contracts: Record<string, OptionContractSnapshot> = {};
   const currentIso = timestamp ?? new Date().toISOString();
 
-  for (const [symbol, snap] of Object.entries(rawSnapshots.snapshots)) {
-    try {
-      const parsed = parseOccSymbol(symbol);
-      const quote = snap.latestQuote;
+  if (!Number.isFinite(Date.parse(currentIso))) {
+    throw new Error("[FAIL-CLOSED] Market snapshot timestamp is invalid.");
+  }
+  const parsedUnderlyingPrice = new Decimal(underlyingPrice);
+  if (!parsedUnderlyingPrice.isFinite() || parsedUnderlyingPrice.lessThanOrEqualTo(0)) {
+    throw new Error("[FAIL-CLOSED] Underlying price must be a positive finite decimal.");
+  }
+  if (rawSnapshots.next_page_token) {
+    throw new Error("[FAIL-CLOSED] Option chain is incomplete; pagination remains.");
+  }
 
-      contracts[symbol] = {
-        symbol,
-        strike: parsed.strike,
-        expiration: parsed.expiration,
-        type: parsed.type,
-        bid: quote?.bp !== undefined ? new Decimal(quote.bp).toFixed(2) : "0.00",
-        ask: quote?.ap !== undefined ? new Decimal(quote.ap).toFixed(2) : "0.00",
-        bidSize: quote?.bs ?? 0,
-        askSize: quote?.as ?? 0,
-        latestTradePrice: snap.latestTrade?.p !== undefined ? new Decimal(snap.latestTrade.p).toFixed(2) : undefined,
-        impliedVolatility: snap.impliedVolatility,
-        delta: snap.greeks?.delta,
-        gamma: snap.greeks?.gamma,
-        theta: snap.greeks?.theta,
-        vega: snap.greeks?.vega,
-        openInterest: snap.openInterest ?? snap.open_interest ?? 0,
-        volume: snap.latestTrade?.s ?? 0,
-        quoteTimestamp: quote?.t ?? currentIso,
-      };
-    } catch {
-      // Ignore unparseable or unsupported non-OCC symbols
-      continue;
+  for (const [symbol, snap] of Object.entries(rawSnapshots.snapshots)) {
+    const parsed = parseOccSymbol(symbol);
+    if (parsed.underlying !== underlying) {
+      throw new Error(
+        `[FAIL-CLOSED] Option chain for ${underlying} contains contract ${symbol} for ${parsed.underlying}.`
+      );
     }
+    const quote = snap.latestQuote;
+    contracts[symbol] = {
+      symbol,
+      strike: parsed.strike,
+      expiration: parsed.expiration,
+      type: parsed.type,
+      bid: quote ? new Decimal(quote.bp).toFixed(2) : "0.00",
+      ask: quote ? new Decimal(quote.ap).toFixed(2) : "0.00",
+      bidSize: quote?.bs ?? 0,
+      askSize: quote?.as ?? 0,
+      latestTradePrice: snap.latestTrade ? new Decimal(snap.latestTrade.p).toFixed(2) : undefined,
+      impliedVolatility: snap.impliedVolatility,
+      delta: snap.greeks?.delta,
+      gamma: snap.greeks?.gamma,
+      theta: snap.greeks?.theta,
+      vega: snap.greeks?.vega,
+      openInterest: snap.openInterest ?? snap.open_interest ?? 0,
+      volume: snap.dailyBar?.v ?? 0,
+      quoteTimestamp: quote?.t ?? "",
+    };
+  }
+
+  if (Object.keys(contracts).length === 0) {
+    throw new Error(`[FAIL-CLOSED] Option chain for ${underlying} is empty.`);
   }
 
   const unsignedSnapshot: Omit<MarketSnapshot, "snapshotHash"> = {
     timestamp: currentIso,
     feed,
     underlying,
-    underlyingPrice: new Decimal(underlyingPrice).toFixed(2),
+    underlyingPrice: parsedUnderlyingPrice.toFixed(2),
     contracts,
   };
 

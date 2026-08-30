@@ -3,6 +3,7 @@ import { propose } from "@/lib/alpha/engine";
 import { buildMarketSnapshot, buildAccountSnapshot } from "@/lib/alpha/snapshots";
 import { sha256Canonical } from "@/lib/alpha/canonical";
 import type { Policy } from "@/types/domain";
+import type { AlpacaBar } from "@/lib/alpaca/types";
 
 const validPolicy: Policy = {
   id: "pol_test_alpha",
@@ -15,11 +16,11 @@ const validPolicy: Policy = {
   allowedUnderlyings: ["SPY", "QQQ"],
   allowedStructures: ["BULL_CALL_DEBIT", "BEAR_PUT_DEBIT"],
   riskProfile: "BALANCED",
-  perTradeMaxLossPct: 0.02,
-  portfolioHeatMaxLossPct: 0.06,
-  dailyHaltPct: -0.03,
+  perTradeMaxLossPct: 0.006,
+  portfolioHeatMaxLossPct: 0.025,
+  dailyHaltPct: -0.0125,
   minDte: 7,
-  maxDte: 45,
+  maxDte: 21,
   minDelta: 0.2,
   maxDelta: 0.8,
   maxQuoteAgeMs: 60000,
@@ -70,7 +71,9 @@ function createValidSnapshots() {
         },
         greeks: { delta: 0.6, gamma: 0.02, theta: -0.05, vega: 0.1 },
         impliedVolatility: 0.18,
+        open_interest: 500,
         latestTrade: { p: 7.1, s: 100, t: "2026-08-30T14:29:50.000Z" },
+        dailyBar: { t: "2026-08-30T14:29:50.000Z", o: 7, h: 7.3, l: 6.9, c: 7.1, v: 200, n: 25, vw: 7.1 },
       },
       SPY260918C00500000: {
         latestQuote: {
@@ -82,7 +85,9 @@ function createValidSnapshots() {
         },
         greeks: { delta: 0.5, gamma: 0.02, theta: -0.05, vega: 0.1 },
         impliedVolatility: 0.18,
+        open_interest: 800,
         latestTrade: { p: 4.1, s: 200, t: "2026-08-30T14:29:50.000Z" },
+        dailyBar: { t: "2026-08-30T14:29:50.000Z", o: 4, h: 4.2, l: 3.9, c: 4.1, v: 300, n: 30, vw: 4.1 },
       },
     },
   };
@@ -99,10 +104,24 @@ function createValidSnapshots() {
   return { market, account };
 }
 
+const bars: AlpacaBar[] = Array.from({ length: 60 }, (_, index) => {
+  const close = 470 + index * 0.5;
+  return {
+    t: new Date(Date.UTC(2026, 6, 2 + index)).toISOString(),
+    o: close - 0.4,
+    h: close + 0.8,
+    l: close - 0.8,
+    c: close,
+    v: 50_000_000,
+    n: 100_000,
+    vw: close,
+  };
+});
+
 describe("Alpha Engine propose()", () => {
   it("proposes a valid TradeIntent given valid market & account state", async () => {
     const { market, account } = createValidSnapshots();
-    const result = await propose(validPolicy, market, account);
+    const result = await propose(validPolicy, market, account, { bars, chainIvAverage: 0.18 });
 
     expect("intent" in result).toBe(true);
     if ("intent" in result) {
@@ -160,8 +179,17 @@ describe("Alpha Engine propose()", () => {
     const { market, account } = createValidSnapshots();
     const result = await propose(validPolicy, market, account, {
       modelConfidenceMultiplier: 0.0,
+      bars,
+      chainIvAverage: 0.18,
     });
 
     expect("abstain" in result).toBe(true);
+  });
+
+  it("fails closed when historical signal evidence is missing", async () => {
+    const { market, account } = createValidSnapshots();
+    const result = await propose(validPolicy, market, account);
+    expect(result).toEqual(expect.objectContaining({ abstain: true }));
+    if ("abstain" in result) expect(result.reason).toContain("At least 21 daily bars");
   });
 });

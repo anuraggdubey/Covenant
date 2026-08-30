@@ -44,6 +44,7 @@ describe("Snapshot Parsing & Hashing", () => {
           },
           greeks: { delta: 0.5, gamma: 0.02, theta: -0.05, vega: 0.1 },
           impliedVolatility: 0.18,
+          dailyBar: { t: "2026-08-30T14:30:00Z", o: 5.3, h: 5.6, l: 5.2, c: 5.4, v: 321, n: 25, vw: 5.4 },
         },
       },
     };
@@ -58,11 +59,27 @@ describe("Snapshot Parsing & Hashing", () => {
 
     expect(marketSnapshot.snapshotHash).toHaveLength(64);
     expect(marketSnapshot.feed).toBe("indicative");
+    expect(marketSnapshot.contracts.SPY260116C00500000.volume).toBe(321);
     expect(verifySnapshotHash(marketSnapshot)).toBe(true);
 
     // Tampering test: mutating a field invalidates hash
     const tampered = { ...marketSnapshot, underlyingPrice: "520.00" };
     expect(verifySnapshotHash(tampered)).toBe(false);
+  });
+
+  it("rejects incomplete and cross-underlying chains", () => {
+    expect(() => buildMarketSnapshot("SPY", "500", {
+      snapshots: {},
+      next_page_token: "more",
+    })).toThrow("pagination remains");
+
+    expect(() => buildMarketSnapshot("SPY", "500", {
+      snapshots: {
+        QQQ260918C00450000: {
+          latestQuote: { ap: 3.1, as: 10, bp: 3, bs: 10, t: "2026-08-30T14:30:00Z" },
+        },
+      },
+    })).toThrow("contains contract");
   });
 
   it("builds a canonical AccountSnapshot and generates a verifiable hash", () => {

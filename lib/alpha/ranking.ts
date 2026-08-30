@@ -1,8 +1,5 @@
 import Decimal from "decimal.js";
-import type {
-  Policy,
-  AccountSnapshot,
-} from "@/types/domain";
+import type { AccountSnapshot, OptionContractSnapshot, Policy } from "@/types/domain";
 import type { CandidateSpread } from "./factory";
 import { calculateVerticalPayoff, type PayoffCalculation } from "./payoff";
 import type { SignalAnalysis } from "./signals";
@@ -12,114 +9,139 @@ export interface RankedCandidate {
   quantity: number;
   finalPayoff: PayoffCalculation;
   alphaScore: number;
+  expectedPnl: string;
+  lowerConfidenceBoundPnl: string;
+  scenarioCount: number;
   portfolioHeatAfterTrade: string;
   thesis: string;
 }
 
-/**
- * Sizes, scores, and ranks candidates against policy risk limits and market signals.
- */
+interface ScenarioStats {
+  expectedPnlPerContract: number;
+  lowerConfidenceBoundPerContract: number;
+  scenarioCount: number;
+}
+
+function intrinsic(contract: OptionContractSnapshot, underlyingPrice: number): number {
+  const strike = Number(contract.strike);
+  return contract.type === "call"
+    ? Math.max(underlyingPrice - strike, 0)
+    : Math.max(strike - underlyingPrice, 0);
+}
+
+function evaluateScenarios(
+  candidate: CandidateSpread,
+  spot: number,
+  signals: SignalAnalysis
+): ScenarioStats | null {
+  const returns = signals.dailyLogReturns;
+  if (!signals.usable || returns.length < 20 || !Number.isFinite(spot) || spot <= 0) {
+    return null;
+  }
+
+  const entry = Number(candidate.payoff.netDebitOrCreditPerShare);
+  if (!Number.isFinite(entry)) return null;
+
+  const horizon = Math.max(1, Math.min(candidate.dte, 21));
+  const scenarioPnls: number[] = [];
+  for (let start = 0; start < returns.length; start++) {
+    let horizonReturn = 0;
+    for (let day = 0; day < horizon; day++) {
+      horizonReturn += returns[(start + day) % returns.length];
+    }
+    const terminal = spot * Math.exp(horizonReturn);
+    const spreadValue =
+      intrinsic(candidate.longContract, terminal) -
+      intrinsic(candidate.shortContract, terminal);
+    const pnl = (spreadValue - entry - 0.02) * 100;
+    if (Number.isFinite(pnl)) scenarioPnls.push(pnl);
+  }
+
+  if (scenarioPnls.length < 20) return null;
+  const mean = scenarioPnls.reduce((sum, pnl) => sum + pnl, 0) / scenarioPnls.length;
+  const variance = scenarioPnls.reduce((sum, pnl) => sum + (pnl - mean) ** 2, 0) /
+    (scenarioPnls.length - 1);
+  const standardError = Math.sqrt(variance) / Math.sqrt(scenarioPnls.length);
+
+  return {
+    expectedPnlPerContract: mean,
+    lowerConfidenceBoundPerContract: mean - 1.645 * standardError,
+    scenarioCount: scenarioPnls.length,
+  };
+}
+
 export function rankAndSizeCandidates(
   candidates: CandidateSpread[],
   policy: Policy,
   account: AccountSnapshot,
   signals: SignalAnalysis,
-  modelConfidenceMultiplier: number = 1.0
+  underlyingPrice: string,
+  modelConfidenceMultiplier = 1
 ): RankedCandidate[] {
-  // Constrain model multiplier to [0, 1] — model can only shrink or veto
   const constrainedMultiplier = Math.max(0, Math.min(1, modelConfidenceMultiplier));
-  if (constrainedMultiplier === 0) {
-    return [];
-  }
+  const equity = new Decimal(account.equity);
+  const spot = Number(underlyingPrice);
+  if (!signals.usable || constrainedMultiplier === 0 || equity.lessThanOrEqualTo(0)) return [];
 
-  const equityDec = new Decimal(account.equity);
-  if (equityDec.lessThanOrEqualTo(0)) {
-    return [];
-  }
-
-  const maxRiskPerTradeDollars = equityDec.times(new Decimal(policy.perTradeMaxLossPct));
+  const maxRisk = equity.times(policy.perTradeMaxLossPct);
   const ranked: RankedCandidate[] = [];
 
-  for (const cand of candidates) {
-    const singleContractMaxLoss = new Decimal(cand.payoff.standaloneMaxLoss);
-    if (singleContractMaxLoss.lessThanOrEqualTo(0)) {
-      continue;
-    }
+  for (const candidate of candidates) {
+    const scenario = evaluateScenarios(candidate, spot, signals);
+    if (!scenario || scenario.lowerConfidenceBoundPerContract <= 0) continue;
 
-    // Maximum contracts allowed under perTradeMaxLossPct
-    const rawMaxQty = Math.floor(
-      maxRiskPerTradeDollars.dividedBy(singleContractMaxLoss).toNumber()
-    );
-    if (rawMaxQty < 1) {
-      continue;
-    }
+    const isBullish = candidate.structure === "BULL_CALL_DEBIT" ||
+      (candidate.structure === "CREDIT_VERTICAL" && candidate.longContract.type === "put");
+    const isBearish = candidate.structure === "BEAR_PUT_DEBIT" ||
+      (candidate.structure === "CREDIT_VERTICAL" && candidate.longContract.type === "call");
+    if (signals.trend === "BULLISH" && isBearish) continue;
+    if (signals.trend === "BEARISH" && isBullish) continue;
+    if (candidate.structure === "CREDIT_VERTICAL" && (signals.ivPremium ?? 0) <= 0) continue;
 
-    // Cap at reasonable max per order (e.g. 10 contracts) and apply confidence shrink
-    const baseQty = Math.min(rawMaxQty, 10);
-    const finalQty = Math.floor(baseQty * constrainedMultiplier);
-    if (finalQty < 1) {
-      continue;
-    }
+    const oneContractMaxLoss = new Decimal(candidate.payoff.standaloneMaxLoss);
+    if (oneContractMaxLoss.lessThanOrEqualTo(0)) continue;
+    const rawQuantity = Math.floor(maxRisk.dividedBy(oneContractMaxLoss).toNumber());
+    const quantity = Math.floor(Math.min(rawQuantity, 10) * constrainedMultiplier);
+    if (quantity < 1) continue;
 
-    // Recalculate exact payoff for the final quantity
     let finalPayoff: PayoffCalculation;
     try {
       finalPayoff = calculateVerticalPayoff({
-        structure: cand.structure,
-        longLeg: cand.longContract,
-        shortLeg: cand.shortContract,
-        quantity: finalQty,
+        structure: candidate.structure,
+        longLeg: candidate.longContract,
+        shortLeg: candidate.shortContract,
+        quantity,
       });
     } catch {
       continue;
     }
 
-    // Check portfolio heat ceiling
-    const existingHeatDollars = equityDec.times(new Decimal(account.portfolioHeatPct));
-    const newTradeMaxLossDollars = new Decimal(finalPayoff.standaloneMaxLoss);
-    const totalHeatDollars = existingHeatDollars.plus(newTradeMaxLossDollars);
-    const totalHeatPct = totalHeatDollars.dividedBy(equityDec).toNumber();
+    const currentHeat = equity.times(account.portfolioHeatPct);
+    const totalHeat = currentHeat.plus(finalPayoff.standaloneMaxLoss);
+    const totalHeatPct = totalHeat.dividedBy(equity);
+    if (totalHeatPct.greaterThan(policy.portfolioHeatMaxLossPct)) continue;
 
-    if (totalHeatPct > policy.portfolioHeatMaxLossPct) {
-      continue;
-    }
-
-    // Calculate alpha score (0 - 100)
-    let score = 50;
-
-    // 1. Trend alignment
-    if (cand.structure === "BULL_CALL_DEBIT") {
-      if (signals.trend === "BULLISH") score += 25;
-      else if (signals.trend === "BEARISH") score -= 25;
-    } else if (cand.structure === "BEAR_PUT_DEBIT") {
-      if (signals.trend === "BEARISH") score += 25;
-      else if (signals.trend === "BULLISH") score -= 25;
-    }
-
-    // 2. Risk/Reward ratio
-    const rr = Number(finalPayoff.riskRewardRatio);
-    if (rr >= 1.0) score += 15;
-    else if (rr < 0.5) score -= 10;
-
-    // 3. DTE sweet spot (14 - 35 days)
-    if (cand.dte >= 14 && cand.dte <= 35) score += 10;
-
-    const clampedScore = Math.max(1, Math.min(99, score));
-
-    const thesis = `${cand.underlying} ${cand.structure} (${cand.longContract.strike}/${cand.shortContract.strike} exp ${cand.expiry}) sized to ${finalQty} contracts. Standalone Max Loss: $${finalPayoff.standaloneMaxLoss}, Alpha Score: ${clampedScore}. ${signals.summary}`;
+    const expectedPnl = scenario.expectedPnlPerContract * quantity;
+    const lowerBound = scenario.lowerConfidenceBoundPerContract * quantity;
+    const edgeToRisk = lowerBound / Number(finalPayoff.standaloneMaxLoss);
+    const alphaScore = Math.max(1, Math.min(99, Math.round(50 + edgeToRisk * 100)));
 
     ranked.push({
-      candidate: cand,
-      quantity: finalQty,
+      candidate,
+      quantity,
       finalPayoff,
-      alphaScore: clampedScore,
+      alphaScore,
+      expectedPnl: new Decimal(expectedPnl).toFixed(2),
+      lowerConfidenceBoundPnl: new Decimal(lowerBound).toFixed(2),
+      scenarioCount: scenario.scenarioCount,
       portfolioHeatAfterTrade: totalHeatPct.toFixed(4),
-      thesis,
+      thesis: `${candidate.underlying} ${candidate.structure} has after-cost expected P&L $${expectedPnl.toFixed(2)} and 90% lower bound $${lowerBound.toFixed(2)} across ${scenario.scenarioCount} deterministic bootstrap scenarios. ${signals.summary}`,
     });
   }
 
-  // Sort by alpha score descending
-  ranked.sort((a, b) => b.alphaScore - a.alphaScore);
-
+  ranked.sort((left, right) =>
+    Number(right.lowerConfidenceBoundPnl) - Number(left.lowerConfidenceBoundPnl) ||
+    left.candidate.id.localeCompare(right.candidate.id)
+  );
   return ranked;
 }

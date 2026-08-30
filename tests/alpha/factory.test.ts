@@ -14,11 +14,11 @@ const defaultPolicy: Policy = {
   allowedUnderlyings: ["SPY", "QQQ"],
   allowedStructures: ["BULL_CALL_DEBIT", "BEAR_PUT_DEBIT"],
   riskProfile: "BALANCED",
-  perTradeMaxLossPct: 0.02,
-  portfolioHeatMaxLossPct: 0.06,
-  dailyHaltPct: -0.03,
+  perTradeMaxLossPct: 0.006,
+  portfolioHeatMaxLossPct: 0.025,
+  dailyHaltPct: -0.0125,
   minDte: 7,
-  maxDte: 45,
+  maxDte: 21,
   minDelta: 0.2,
   maxDelta: 0.8,
   maxQuoteAgeMs: 60000,
@@ -120,6 +120,17 @@ describe("Candidate Factory", () => {
         (rawItems) => {
           const contracts: Record<string, OptionContractSnapshot> = {};
 
+          contracts.SPY260919C00495000 = {
+            symbol: "SPY260919C00495000", strike: "495.00", expiration: "2026-09-19", type: "call",
+            bid: "7.00", ask: "7.20", bidSize: 20, askSize: 20, delta: 0.6,
+            openInterest: 100, volume: 50, quoteTimestamp: "2026-08-30T14:30:00.000Z",
+          };
+          contracts.SPY260919C00500000 = {
+            symbol: "SPY260919C00500000", strike: "500.00", expiration: "2026-09-19", type: "call",
+            bid: "4.00", ask: "4.15", bidSize: 20, askSize: 20, delta: 0.5,
+            openInterest: 100, volume: 50, quoteTimestamp: "2026-08-30T14:30:00.000Z",
+          };
+
           rawItems.forEach((item, idx) => {
             const strikeNum = 500 + item.strikeOffset;
             const strikeStr = strikeNum.toFixed(2);
@@ -146,6 +157,7 @@ describe("Candidate Factory", () => {
 
           const market = createMockMarketSnapshot(contracts);
           const candidates = generateCandidates(market, defaultPolicy, 1);
+          expect(candidates.length).toBeGreaterThan(0);
 
           for (const cand of candidates) {
             // Invariant 1: Structure must be defined-risk
@@ -167,5 +179,29 @@ describe("Candidate Factory", () => {
       ),
       { numRuns: 50 }
     );
+  });
+
+  it("fails closed on missing Greeks, liquidity, or mixed underlying symbols", () => {
+    const base: OptionContractSnapshot = {
+      symbol: "SPY260918C00495000", strike: "495.00", expiration: "2026-09-18", type: "call",
+      bid: "7.00", ask: "7.20", bidSize: 20, askSize: 20, delta: 0.6,
+      openInterest: 100, volume: 50, quoteTimestamp: "2026-08-30T14:30:00.000Z",
+    };
+    const validSecond: OptionContractSnapshot = {
+      ...base, symbol: "SPY260918C00500000", strike: "500.00", bid: "4.00", ask: "4.15", delta: 0.5,
+    };
+
+    expect(generateCandidates(createMockMarketSnapshot({
+      [base.symbol]: { ...base, delta: undefined },
+      [validSecond.symbol]: validSecond,
+    }), defaultPolicy)).toHaveLength(0);
+    expect(generateCandidates(createMockMarketSnapshot({
+      [base.symbol]: { ...base, volume: 0 },
+      [validSecond.symbol]: validSecond,
+    }), defaultPolicy)).toHaveLength(0);
+    expect(generateCandidates(createMockMarketSnapshot({
+      QQQ260918C00495000: { ...base, symbol: "QQQ260918C00495000" },
+      [validSecond.symbol]: validSecond,
+    }), defaultPolicy)).toHaveLength(0);
   });
 });

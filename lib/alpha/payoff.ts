@@ -1,10 +1,11 @@
 import Decimal from "decimal.js";
 import type { Structure, Leg } from "@/types/domain";
+import { parseOccSymbol } from "./occ";
 
 export interface PayoffCalculation {
   structure: Structure;
   netDebitOrCreditPerShare: string; // decimal string: positive = debit paid, negative = credit received
-  limitPrice: string;              // absolute price per share to submit in limit order
+  limitPrice: string;              // Alpaca MLeg convention: debit positive, credit negative
   standaloneMaxLoss: string;       // total max loss in dollars for the specified quantity (decimal string)
   standaloneMaxGain: string;       // total max gain in dollars for the specified quantity (decimal string)
   breakevenUnderlying: string;     // underlying price at breakeven
@@ -47,6 +48,20 @@ export function calculateVerticalPayoff(params: PayoffParams): PayoffCalculation
   const slippage = new Decimal(slippageBufferPerContract);
   const qtyDec = new Decimal(quantity);
   const multiplier = new Decimal(100);
+
+  if (!slippage.isFinite() || slippage.isNegative()) {
+    throw new Error("[FAIL-CLOSED] Slippage buffer must be a non-negative finite decimal.");
+  }
+
+  const parsedLong = parseOccSymbol(longLeg.symbol);
+  const parsedShort = parseOccSymbol(shortLeg.symbol);
+  if (
+    parsedLong.underlying !== parsedShort.underlying ||
+    parsedLong.expiration !== parsedShort.expiration ||
+    parsedLong.type !== parsedShort.type
+  ) {
+    throw new Error("[FAIL-CLOSED] Vertical legs must share underlying, expiration, and option type.");
+  }
 
   if (structure === "BULL_CALL_DEBIT") {
     // Buy lower call, sell higher call: longStrike < shortStrike
@@ -143,7 +158,7 @@ export function calculateVerticalPayoff(params: PayoffParams): PayoffCalculation
       throw new Error(`[FAIL-CLOSED] Net credit (${netCredit}) cannot exceed spread width (${width})`);
     }
 
-    const limitPrice = netCredit.toFixed(2);
+    const limitPrice = netCredit.negated().toFixed(2);
     const maxLossPerShare = width.minus(netCredit).plus(slippage);
     const totalMaxLoss = maxLossPerShare.times(multiplier).times(qtyDec);
     const totalMaxGain = netCredit.minus(slippage).times(multiplier).times(qtyDec);
@@ -155,7 +170,9 @@ export function calculateVerticalPayoff(params: PayoffParams): PayoffCalculation
       limitPrice,
       standaloneMaxLoss: totalMaxLoss.toFixed(2),
       standaloneMaxGain: totalMaxGain.greaterThan(0) ? totalMaxGain.toFixed(2) : "0.00",
-      breakevenUnderlying: "0.00",
+      breakevenUnderlying: parsedShort.type === "call"
+        ? shortStrike.plus(netCredit).toFixed(2)
+        : shortStrike.minus(netCredit).toFixed(2),
       riskRewardRatio: riskReward,
     };
   }

@@ -8,6 +8,7 @@ import type {
   OptionContractSnapshot,
 } from "@/types/domain";
 import { calculateVerticalPayoff, type PayoffCalculation } from "./payoff";
+import { parseOccSymbol } from "./occ";
 
 export interface CandidateSpread {
   id: string;
@@ -39,16 +40,38 @@ export function generateCandidates(
   policy: Policy,
   quantity: number = 1
 ): CandidateSpread[] {
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return [];
+  }
   if (!policy.allowedUnderlyings.includes(market.underlying)) {
     return [];
   }
 
   const snapshotTimeMs = new Date(market.timestamp).getTime();
+  if (!Number.isFinite(snapshotTimeMs)) {
+    return [];
+  }
   const validContracts: OptionContractSnapshot[] = [];
 
-  for (const contract of Object.values(market.contracts)) {
+  for (const [snapshotSymbol, contract] of Object.entries(market.contracts)) {
+    let parsedUnderlying: Underlying;
+    try {
+      parsedUnderlying = parseOccSymbol(contract.symbol).underlying;
+    } catch {
+      continue;
+    }
+    if (
+      snapshotSymbol !== contract.symbol ||
+      parsedUnderlying !== market.underlying
+    ) {
+      continue;
+    }
+
     // 1. DTE check
     const expiryTimeMs = new Date(contract.expiration).getTime();
+    if (!Number.isFinite(expiryTimeMs)) {
+      continue;
+    }
     const dte = Math.max(
       0,
       Math.floor((expiryTimeMs - snapshotTimeMs) / (1000 * 60 * 60 * 24))
@@ -59,8 +82,8 @@ export function generateCandidates(
 
     // 2. Quote freshness check
     const quoteTimeMs = new Date(contract.quoteTimestamp).getTime();
-    const quoteAgeMs = Math.abs(snapshotTimeMs - quoteTimeMs);
-    if (quoteAgeMs > policy.maxQuoteAgeMs) {
+    const quoteAgeMs = snapshotTimeMs - quoteTimeMs;
+    if (!Number.isFinite(quoteTimeMs) || quoteAgeMs < 0 || quoteAgeMs > policy.maxQuoteAgeMs) {
       continue;
     }
 
@@ -79,17 +102,22 @@ export function generateCandidates(
     }
 
     // 5. Delta range check
-    if (contract.delta !== undefined) {
-      const absDelta = Math.abs(contract.delta);
-      if (absDelta < policy.minDelta || absDelta > policy.maxDelta) {
-        continue;
-      }
+    if (contract.delta === undefined || !Number.isFinite(contract.delta)) {
+      continue;
+    }
+    const absDelta = Math.abs(contract.delta);
+    if (absDelta < policy.minDelta || absDelta > policy.maxDelta) {
+      continue;
     }
 
     // 6. Liquidity checks
     if (
-      (contract.openInterest > 0 && contract.openInterest < policy.minOpenInterest) ||
-      (contract.volume > 0 && contract.volume < policy.minVolume)
+      !Number.isInteger(contract.openInterest) ||
+      !Number.isFinite(contract.volume) ||
+      contract.openInterest < policy.minOpenInterest ||
+      contract.volume < policy.minVolume ||
+      contract.bidSize <= 0 ||
+      contract.askSize <= 0
     ) {
       continue;
     }

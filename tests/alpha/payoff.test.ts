@@ -99,4 +99,34 @@ describe("Vertical Spread Payoff & Standalone Max-Loss", () => {
       })
     ).toThrow("cannot exceed or equal spread width");
   });
+
+  it("uses Alpaca signed credit prices and computes credit breakevens", () => {
+    const bullPut = calculateVerticalPayoff({
+      structure: "CREDIT_VERTICAL",
+      longLeg: { symbol: "SPY260116P00495000", strike: "495.00", ask: "1.00", bid: "0.90" },
+      shortLeg: { symbol: "SPY260116P00500000", strike: "500.00", ask: "3.10", bid: "3.00" },
+      quantity: 1,
+    });
+    expect(bullPut.limitPrice).toBe("-2.00");
+    expect(bullPut.standaloneMaxLoss).toBe("302.00");
+    expect(bullPut.breakevenUnderlying).toBe("498.00");
+
+    const bearCall = calculateVerticalPayoff({
+      structure: "CREDIT_VERTICAL",
+      longLeg: { symbol: "SPY260116C00505000", strike: "505.00", ask: "1.00", bid: "0.90" },
+      shortLeg: { symbol: "SPY260116C00500000", strike: "500.00", ask: "3.10", bid: "3.00" },
+      quantity: 1,
+    });
+    expect(bearCall.limitPrice).toBe("-2.00");
+    expect(bearCall.breakevenUnderlying).toBe("502.00");
+  });
+
+  it("rejects legs from different underlyings", () => {
+    expect(() => calculateVerticalPayoff({
+      structure: "BULL_CALL_DEBIT",
+      longLeg: { symbol: "SPY260116C00500000", strike: "500.00", ask: "2.00", bid: "1.90" },
+      shortLeg: { symbol: "QQQ260116C00505000", strike: "505.00", ask: "1.10", bid: "1.00" },
+      quantity: 1,
+    })).toThrow("share underlying");
+  });
 });

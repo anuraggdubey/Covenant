@@ -4,28 +4,31 @@ import { useState, useEffect } from "react";
 
 export function MarketTicker() {
   const [marketData, setMarketData] = useState({
-    spy: { price: 504.25, change: "+0.85%", up: true },
-    qqq: { price: 452.80, change: "+1.12%", up: true },
-    vix: { price: 14.85, change: "-3.40%", up: false },
-    tnx: { price: "4.21%", change: "-0.02", up: false },
+    spyPrice: "504.25",
+    qqqPrice: "452.80",
+    vixPrice: "14.85",
+    yield10y: "4.21%",
+    feed: "INDICATIVE (OPRA READY)",
+    marketOpen: true,
   });
 
-  // Micro-fluctuations for authentic market feel
   useEffect(() => {
-    const interval = setInterval(() => {
-      setMarketData((prev) => ({
-        ...prev,
-        spy: {
-          ...prev.spy,
-          price: Number((504.25 + (Math.random() - 0.5) * 0.15).toFixed(2)),
-        },
-        qqq: {
-          ...prev.qqq,
-          price: Number((452.80 + (Math.random() - 0.5) * 0.20).toFixed(2)),
-        },
-      }));
-    }, 3000);
-    return () => clearInterval(interval);
+    async function loadLiveData() {
+      try {
+        const res = await fetch("/api/health");
+        const json = await res.json();
+        if (json.alpaca) {
+          setMarketData((prev) => ({
+            ...prev,
+            feed: json.alpaca.feed ? `${json.alpaca.feed.toUpperCase()} (OPRA READY)` : prev.feed,
+            marketOpen: json.alpaca.marketOpen ?? prev.marketOpen,
+          }));
+        }
+      } catch {
+        // Fallback gracefully
+      }
+    }
+    loadLiveData();
   }, []);
 
   return (
@@ -45,32 +48,32 @@ export function MarketTicker() {
       <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <span style={{ color: "var(--text-muted)", fontWeight: 700 }}>SPY</span>
-          <span className="mono" style={{ fontWeight: 800 }}>${marketData.spy.price}</span>
-          <span style={{ color: "var(--emerald)", fontWeight: 700 }}>{marketData.spy.change}</span>
+          <span className="mono" style={{ fontWeight: 800 }}>${marketData.spyPrice}</span>
+          <span style={{ color: "var(--emerald)", fontWeight: 700 }}>+0.85%</span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <span style={{ color: "var(--text-muted)", fontWeight: 700 }}>QQQ</span>
-          <span className="mono" style={{ fontWeight: 800 }}>${marketData.qqq.price}</span>
-          <span style={{ color: "var(--emerald)", fontWeight: 700 }}>{marketData.qqq.change}</span>
+          <span className="mono" style={{ fontWeight: 800 }}>${marketData.qqqPrice}</span>
+          <span style={{ color: "var(--emerald)", fontWeight: 700 }}>+1.12%</span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ color: "var(--text-muted)", fontWeight: 700 }}>VIX (VOLATILITY)</span>
-          <span className="mono" style={{ fontWeight: 800 }}>{marketData.vix.price}</span>
-          <span style={{ color: "var(--cyan)", fontWeight: 700 }}>{marketData.vix.change}</span>
+          <span style={{ color: "var(--text-muted)", fontWeight: 700 }}>VIX</span>
+          <span className="mono" style={{ fontWeight: 800 }}>{marketData.vixPrice}</span>
+          <span style={{ color: "var(--cyan)", fontWeight: 700 }}>-3.40%</span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <span style={{ color: "var(--text-muted)", fontWeight: 700 }}>10Y YIELD</span>
-          <span className="mono" style={{ fontWeight: 800 }}>{marketData.tnx.price}</span>
+          <span className="mono" style={{ fontWeight: 800 }}>{marketData.yield10y}</span>
         </div>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--emerald)", fontWeight: 700 }}>
           <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "var(--emerald)", boxShadow: "0 0 8px var(--emerald)" }} />
-          DATA FEED: INDICATIVE (OPRA READY)
+          DATA FEED: {marketData.feed}
         </span>
       </div>
     </div>

@@ -46,11 +46,45 @@ async function handleCandidates() {
         1.0
       );
 
+      // Build real option chain strike ladder grouped by expiration
+      const expirationsSet = new Set<string>();
+      const ladderByExpiry: Record<string, Record<string, { call?: any; put?: any }>> = {};
+
+      for (const contract of Object.values(marketSnapshot.contracts)) {
+        expirationsSet.add(contract.expiration);
+        if (!ladderByExpiry[contract.expiration]) {
+          ladderByExpiry[contract.expiration] = {};
+        }
+        if (!ladderByExpiry[contract.expiration][contract.strike]) {
+          ladderByExpiry[contract.expiration][contract.strike] = {};
+        }
+
+        if (contract.type === "call") {
+          ladderByExpiry[contract.expiration][contract.strike].call = contract;
+        } else {
+          ladderByExpiry[contract.expiration][contract.strike].put = contract;
+        }
+      }
+
+      // Convert ladderByExpiry into sorted arrays
+      const formattedLadders: Record<string, Array<{ strike: string; call?: any; put?: any }>> = {};
+      for (const [exp, strikesMap] of Object.entries(ladderByExpiry)) {
+        const sortedStrikes = Object.keys(strikesMap).sort((a, b) => Number(a) - Number(b));
+        formattedLadders[exp] = sortedStrikes.map((strike) => ({
+          strike,
+          call: strikesMap[strike].call,
+          put: strikesMap[strike].put,
+        }));
+      }
+
       results.push({
         underlying: sym,
         underlyingPrice: price,
+        feed: marketSnapshot.feed,
         marketSnapshotHash: marketSnapshot.snapshotHash,
         totalContractsInChain: Object.keys(marketSnapshot.contracts).length,
+        expirations: Array.from(expirationsSet).sort(),
+        ladderByExpiry: formattedLadders,
         signals,
         candidatesCount: candidates.length,
         rankedCandidates: ranked.map((r) => ({

@@ -1,42 +1,80 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+
+type HealthSummary =
+  | { status: "loading" | "unavailable" }
+  | {
+      status: "available";
+      mode: "PAPER_TRADING" | "SYNTHETIC_MOCK";
+      marketOpen: boolean;
+      optionFeed: string;
+      stockFeed: string;
+    };
 
 export function MarketTicker() {
-  const [marketData, setMarketData] = useState({
-    spyPrice: "504.25",
-    qqqPrice: "452.80",
-    vixPrice: "14.85",
-    yield10y: "4.21%",
-    feed: "INDICATIVE (OPRA READY)",
-    marketOpen: true,
-  });
+  const [health, setHealth] = useState<HealthSummary>({ status: "loading" });
 
   useEffect(() => {
-    async function loadLiveData() {
+    const controller = new AbortController();
+
+    async function loadHealth() {
       try {
-        const res = await fetch("/api/health");
-        const json = await res.json();
-        if (json.alpaca) {
-          setMarketData((prev) => ({
-            ...prev,
-            feed: json.alpaca.feed ? `${json.alpaca.feed.toUpperCase()} (OPRA READY)` : prev.feed,
-            marketOpen: json.alpaca.marketOpen ?? prev.marketOpen,
-          }));
+        const response = await fetch("/api/health", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("Health endpoint unavailable");
+
+        const payload = (await response.json()) as {
+          mode?: "PAPER_TRADING" | "SYNTHETIC_MOCK";
+          alpaca?: {
+            marketOpen?: boolean;
+            optionFeed?: string;
+            stockFeed?: string;
+          };
+        };
+        if (
+          !payload.mode ||
+          typeof payload.alpaca?.marketOpen !== "boolean" ||
+          !payload.alpaca.optionFeed ||
+          !payload.alpaca.stockFeed
+        ) {
+          throw new Error("Health response incomplete");
         }
-      } catch {
-        // Fallback gracefully
+
+        setHealth({
+          status: "available",
+          mode: payload.mode,
+          marketOpen: payload.alpaca.marketOpen,
+          optionFeed: payload.alpaca.optionFeed.toUpperCase(),
+          stockFeed: payload.alpaca.stockFeed.toUpperCase(),
+        });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setHealth({ status: "unavailable" });
       }
     }
-    loadLiveData();
+
+    void loadHealth();
+    return () => controller.abort();
   }, []);
+
+  const items =
+    health.status === "available"
+      ? [
+          ["RUNTIME", health.mode],
+          ["MARKET", health.marketOpen ? "OPEN" : "CLOSED"],
+          ["STOCK FEED", health.stockFeed],
+          ["OPTIONS FEED", health.optionFeed],
+        ]
+      : [["ALPACA HEALTH", health.status === "loading" ? "CHECKING" : "UNAVAILABLE"]];
 
   return (
     <div
       style={{
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
         padding: "6px 28px",
         background: "rgba(10, 14, 22, 0.95)",
         borderBottom: "1px solid var(--border-subtle)",
@@ -45,37 +83,12 @@ export function MarketTicker() {
         gap: "24px",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ color: "var(--text-muted)", fontWeight: 700 }}>SPY</span>
-          <span className="mono" style={{ fontWeight: 800 }}>${marketData.spyPrice}</span>
-          <span style={{ color: "var(--emerald)", fontWeight: 700 }}>+0.85%</span>
+      {items.map(([label, value]) => (
+        <div key={label} style={{ display: "flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap" }}>
+          <span style={{ color: "var(--text-muted)", fontWeight: 700 }}>{label}</span>
+          <span className="mono" style={{ fontWeight: 800 }}>{value}</span>
         </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ color: "var(--text-muted)", fontWeight: 700 }}>QQQ</span>
-          <span className="mono" style={{ fontWeight: 800 }}>${marketData.qqqPrice}</span>
-          <span style={{ color: "var(--emerald)", fontWeight: 700 }}>+1.12%</span>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ color: "var(--text-muted)", fontWeight: 700 }}>VIX</span>
-          <span className="mono" style={{ fontWeight: 800 }}>{marketData.vixPrice}</span>
-          <span style={{ color: "var(--cyan)", fontWeight: 700 }}>-3.40%</span>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ color: "var(--text-muted)", fontWeight: 700 }}>10Y YIELD</span>
-          <span className="mono" style={{ fontWeight: 800 }}>{marketData.yield10y}</span>
-        </div>
-      </div>
-
-      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-        <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--emerald)", fontWeight: 700 }}>
-          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "var(--emerald)", boxShadow: "0 0 8px var(--emerald)" }} />
-          DATA FEED: {marketData.feed}
-        </span>
-      </div>
+      ))}
     </div>
   );
 }

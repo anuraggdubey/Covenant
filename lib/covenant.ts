@@ -11,7 +11,7 @@ export const components: CovenantComponent[] = [
     name: "Break Me Engine",
     authority: "Attacks policy invariants with generated hostile orders and portfolio states.",
     output: "Coverage report or minimized counterexample",
-    status: "testing"
+    status: "blocked"
   },
   {
     name: "Alpha Engine",
@@ -23,7 +23,7 @@ export const components: CovenantComponent[] = [
     name: "Safety Kernel + Permit Executor",
     authority: "Signs exact short-lived TradePermits and submits only matching Alpaca paper orders.",
     output: "Decision Certificate and Alpaca order ID",
-    status: "verified"
+    status: "blocked"
   }
 ];
 

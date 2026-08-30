@@ -3,27 +3,81 @@
 import { useState, useEffect } from "react";
 import { PayoffChart } from "@/components/PayoffChart";
 
+interface ContractView {
+  bid: string;
+  ask: string;
+  delta?: number;
+  impliedVolatility?: number;
+}
+
+interface LegView {
+  symbol: string;
+  side: "buy" | "sell";
+  ratioQty: number;
+  positionIntent: string;
+}
+
+interface RankedCandidateView {
+  id: string;
+  structure: string;
+  expiry: string;
+  dte: number;
+  legs: LegView[];
+  quantity: number;
+  limitPrice: string;
+  standaloneMaxLoss: string;
+  standaloneMaxGain: string;
+  breakevenUnderlying: string;
+  riskRewardRatio: string;
+  alphaScore: number;
+  expectedPnl: string;
+  lowerConfidenceBoundPnl: string;
+  scenarioCount: number;
+  thesis: string;
+}
+
+interface UnderlyingView {
+  underlying: "SPY" | "QQQ";
+  underlyingPrice: string;
+  feed: string;
+  totalContractsInChain: number;
+  expirations: string[];
+  ladderByExpiry: Record<string, Array<{ strike: string; call?: ContractView; put?: ContractView }>>;
+  signals: { usable: boolean; trend: string; realizedVol20d: number };
+  candidatesCount: number;
+  rankedCandidates: RankedCandidateView[];
+}
+
+interface CandidateResponse {
+  dataMode: "PAPER" | "SYNTHETIC_MOCK";
+  underlyings: UnderlyingView[];
+}
+
 export default function CandidateLabPage() {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<CandidateResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [selectedUnderlying, setSelectedUnderlying] = useState<"SPY" | "QQQ">("SPY");
   const [selectedExpiry, setSelectedExpiry] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"SPREADS" | "CHAIN_LADDER">("SPREADS");
 
   const fetchCandidates = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/candidates");
-      const json = await res.json();
+      const json = await res.json() as CandidateResponse & { error?: string };
+      if (!res.ok) throw new Error(json.error ?? "Candidate data is unavailable.");
       setData(json);
 
       // Default selected expiry to first available
-      const activeData = json?.underlyings?.find((u: any) => u.underlying === selectedUnderlying);
-      if (activeData?.expirations?.length > 0 && !selectedExpiry) {
+      const activeData = json.underlyings.find((underlying) => underlying.underlying === selectedUnderlying);
+      if (activeData && activeData.expirations.length > 0 && !selectedExpiry) {
         setSelectedExpiry(activeData.expirations[0]);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: unknown) {
+      setData(null);
+      setError(err instanceof Error ? err.message : "Candidate data is unavailable.");
     } finally {
       setLoading(false);
     }
@@ -34,7 +88,7 @@ export default function CandidateLabPage() {
   }, []);
 
   const activeUnderlyingData = data?.underlyings?.find(
-    (u: any) => u.underlying === selectedUnderlying
+    (underlying) => underlying.underlying === selectedUnderlying
   );
 
   const activeExpirations = activeUnderlyingData?.expirations ?? [];
@@ -48,13 +102,14 @@ export default function CandidateLabPage() {
         <div>
           <div style={{ display: "inline-flex", gap: "8px", marginBottom: "8px" }}>
             <span className="badge badge-cyan">LANE A · ALPACA MARKET DATA</span>
-            <span className="badge badge-emerald">REAL-TIME INGESTION</span>
+            <span className="badge badge-emerald">LATEST AVAILABLE SNAPSHOTS</span>
+            {data?.dataMode === "SYNTHETIC_MOCK" && <span className="badge badge-amber">SYNTHETIC MOCK DATA</span>}
           </div>
           <h1 style={{ fontSize: "2.4rem", fontWeight: 900, letterSpacing: "-0.02em" }}>
             Candidate Lab & Option Chains
           </h1>
           <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem" }}>
-            Ingesting live Alpaca options snapshots, Greeks, implied volatility, and compiling defined-risk vertical spreads.
+            Ingesting Alpaca option snapshots, Greeks, implied volatility, and compiling defined-risk vertical spreads. Indicative data is delayed and modified by the provider.
           </p>
         </div>
 
@@ -95,22 +150,28 @@ export default function CandidateLabPage() {
               style={{ padding: "6px 14px", border: "none" }}
               onClick={() => setActiveTab("CHAIN_LADDER")}
             >
-              Live Option Ladder
+              Option Snapshot Ladder
             </button>
           </div>
 
           <button className="btn-primary" onClick={fetchCandidates} disabled={loading}>
-            {loading ? "Fetching..." : "↻ Refresh Alpaca Data"}
+            {loading ? "Fetching..." : "Refresh Candidate Data"}
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="glass-panel" style={{ padding: "18px", marginBottom: "24px", color: "var(--amber)" }}>
+          {error}
+        </div>
+      )}
 
       {/* Underlying Market State Bar */}
       {activeUnderlyingData && (
         <div className="glass-panel" style={{ padding: "20px", marginBottom: "28px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
           <div>
             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
-              Live Price (Alpaca Paper)
+              {data?.dataMode === "SYNTHETIC_MOCK" ? "Synthetic Underlying Price" : "Latest Alpaca Paper Price"}
             </div>
             <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#fff" }}>
               ${activeUnderlyingData.underlyingPrice}
@@ -162,9 +223,9 @@ export default function CandidateLabPage() {
             <div className="glass-panel" style={{ padding: "40px", textAlign: "center", color: "var(--text-secondary)" }}>
               Ingesting live option chains and generating defined-risk spreads...
             </div>
-          ) : activeUnderlyingData?.rankedCandidates?.length > 0 ? (
+          ) : activeUnderlyingData && activeUnderlyingData.rankedCandidates.length > 0 ? (
             <div style={{ display: "grid", gap: "24px" }}>
-              {activeUnderlyingData.rankedCandidates.map((cand: any, idx: number) => (
+              {activeUnderlyingData.rankedCandidates.map((cand, idx) => (
                 <div
                   key={cand.id}
                   className="glass-panel-glow"
@@ -192,7 +253,7 @@ export default function CandidateLabPage() {
                           Exact OCC Contract Legs
                         </div>
                         <div style={{ display: "grid", gap: "8px" }}>
-                          {cand.legs.map((leg: any, lIdx: number) => (
+                          {cand.legs.map((leg, lIdx) => (
                             <div key={lIdx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.86rem" }}>
                               <span className="mono" style={{ color: leg.side === "buy" ? "var(--emerald)" : "var(--rose)", fontWeight: 800 }}>
                                 {leg.positionIntent.toUpperCase()} {leg.ratioQty}x
@@ -212,7 +273,7 @@ export default function CandidateLabPage() {
                         structure={cand.structure}
                         maxLoss={cand.standaloneMaxLoss}
                         maxGain={cand.standaloneMaxGain}
-                        breakeven={(Number(cand.limitPrice) + 500).toFixed(2)}
+                        breakeven={cand.breakevenUnderlying}
                         limitPrice={cand.limitPrice}
                       />
                     </div>
@@ -244,6 +305,10 @@ export default function CandidateLabPage() {
                       <span style={{ color: "var(--text-muted)" }}>Alpha Score:</span>
                       <div className="mono" style={{ fontWeight: 900, color: "var(--emerald)" }}>{cand.alphaScore}/100</div>
                     </div>
+                    <div>
+                      <span style={{ color: "var(--text-muted)" }}>90% Lower Bound:</span>
+                      <div className="mono" style={{ fontWeight: 800, color: "var(--emerald)" }}>${cand.lowerConfidenceBoundPnl}</div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -261,7 +326,7 @@ export default function CandidateLabPage() {
         <div className="glass-panel" style={{ padding: "20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
             <h2 style={{ fontSize: "1.2rem", fontWeight: 800 }}>
-              Live Option Chain Ladder — {selectedUnderlying}
+              Option Snapshot Ladder — {selectedUnderlying}
             </h2>
 
             {/* Expiration Picker */}
@@ -312,7 +377,7 @@ export default function CandidateLabPage() {
               </thead>
               <tbody>
                 {currentLadder.length > 0 ? (
-                  currentLadder.map((row: any, rIdx: number) => {
+                  currentLadder.map((row, rIdx) => {
                     const c = row.call;
                     const p = row.put;
                     return (

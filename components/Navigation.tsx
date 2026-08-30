@@ -35,7 +35,7 @@ export function Navigation() {
           </span>
         </Link>
         <span className="badge badge-cyan" style={{ fontSize: "0.68rem" }}>
-          PAPER TRADING
+          PAPER-ONLY BUILD
         </span>
       </div>
 
@@ -54,19 +54,9 @@ export function Navigation() {
         })}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>
-            Paper Equity
-          </div>
-          <div className="mono" style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--emerald)" }}>
-            $100,000.00
-          </div>
-        </div>
-        <span className="badge badge-emerald" style={{ fontSize: "0.68rem" }}>
-          LEVEL 3 APPROVED
-        </span>
-      </div>
+      <span className="badge badge-amber" style={{ fontSize: "0.68rem" }}>
+        ACCOUNT UNVERIFIED
+      </span>
     </nav>
   );
 }

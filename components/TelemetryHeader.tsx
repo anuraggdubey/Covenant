@@ -1,24 +1,10 @@
-"use client";
-
-import { useState, useEffect } from "react";
-
 export function TelemetryHeader() {
-  const [time, setTime] = useState<string>("");
-
-  useEffect(() => {
-    setTime(new Date().toISOString());
-    const interval = setInterval(() => {
-      setTime(new Date().toISOString());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
     <div className="telemetry-bar">
       <div className="telemetry-item">
-        <span style={{ color: "var(--text-muted)" }}>POLICY HASH:</span>
+        <span style={{ color: "var(--text-muted)" }}>LANE A SCOPE:</span>
         <span className="mono" style={{ color: "var(--cyan)", fontSize: "0.74rem" }}>
-          8f7a9d3e5b1c4e6a...c0d
+          READ PATH ONLY
         </span>
       </div>
 
@@ -29,15 +15,13 @@ export function TelemetryHeader() {
       </div>
 
       <div className="telemetry-item">
-        <span style={{ color: "var(--text-muted)" }}>AUTHORITY:</span>
-        <span style={{ color: "var(--amber)", fontWeight: 700 }}>VETO_OR_SHRINK</span>
+        <span style={{ color: "var(--text-muted)" }}>WRITE PATH:</span>
+        <span style={{ color: "var(--amber)", fontWeight: 700 }}>DISABLED</span>
       </div>
 
       <div className="telemetry-item">
-        <span style={{ color: "var(--text-muted)" }}>CLOCK:</span>
-        <span className="mono" style={{ color: "var(--emerald)" }}>
-          {time || "2026-08-30T14:30:00.000Z"}
-        </span>
+        <span style={{ color: "var(--text-muted)" }}>ENFORCEMENT:</span>
+        <span style={{ color: "var(--amber)", fontWeight: 700 }}>NOT IMPLEMENTED</span>
       </div>
     </div>
   );

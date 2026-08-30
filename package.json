@@ -10,7 +10,8 @@
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "tick": "tsx scripts/tick.ts"
+    "tick": "tsx scripts/tick.ts",
+    "validate:walk-forward": "tsx scripts/validate-walk-forward.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",

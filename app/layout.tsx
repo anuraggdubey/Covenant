@@ -1,19 +1,25 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Navigation } from "@/components/Navigation";
+import { TelemetryHeader } from "@/components/TelemetryHeader";
 
 export const metadata: Metadata = {
-  title: "Covenant",
-  description: "The proof-carrying options agent that tries to break your mandate before it trades."
+  title: "Covenant — Proof-Carrying Options Agent",
+  description: "The proof-carrying options agent that compiles trader mandates into verified policy before execution.",
 };
 
 export default function RootLayout({
-  children
+  children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <Navigation />
+        <TelemetryHeader />
+        <main>{children}</main>
+      </body>
     </html>
   );
 }

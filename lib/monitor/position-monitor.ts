@@ -11,6 +11,11 @@ export interface OpenPositionState {
   expiry: string;
   dte: number;
   legs: Leg[];
+  exitWorkflow?: {
+    initiatedAt: string;
+    attempts: number;
+    lastStatus: "PENDING" | "ACCEPTED" | "REJECTED" | "FAILED";
+  };
 }
 
 export interface PositionExitEvaluation {
@@ -25,23 +30,69 @@ export interface PositionExitEvaluation {
  */
 export function evaluatePositionExit(
   position: OpenPositionState,
-  policy: Policy
+  policy: Policy,
+  evaluatedAt: string = new Date().toISOString()
 ): PositionExitEvaluation {
-  // 1. Expiration Deadline Rule: if DTE is at or below deadline
-  if (position.dte <= 0) {
+  const entryDec = new Decimal(position.entryPrice);
+  const currentDec = new Decimal(position.currentPrice);
+  const pnlDec = new Decimal(position.unrealizedPnl);
+  if (
+    !Number.isInteger(position.qty) || position.qty === 0 ||
+    !Number.isInteger(position.dte) ||
+    !entryDec.isFinite() || entryDec.lessThanOrEqualTo(0) ||
+    !currentDec.isFinite() || currentDec.isNegative() ||
+    !pnlDec.isFinite() ||
+    position.legs.length < 2
+  ) {
     return {
       shouldExit: true,
-      action: "EXIT_EXPIRATION_DEADLINE",
-      reason: `Position at expiration (DTE: ${position.dte}). Mandatory exit before assignment.`,
+      action: "ESCALATE",
+      reason: "[FAIL-CLOSED] Position state is missing or inconsistent; disable new entries and escalate.",
     };
   }
 
-  // 2. Profit target (e.g. 50% of credit/max gain) & Stop loss
-  const pnlDec = new Decimal(position.unrealizedPnl);
-  const entryDec = new Decimal(position.entryPrice).times(Math.abs(position.qty)).times(100);
+  const suggestedExitLegs = position.legs.map((leg): Leg => ({
+    ...leg,
+    side: leg.side === "buy" ? "sell" : "buy",
+    positionIntent: leg.positionIntent === "buy_to_open"
+      ? "sell_to_close"
+      : leg.positionIntent === "sell_to_open"
+        ? "buy_to_close"
+        : leg.positionIntent,
+  }));
 
-  if (entryDec.greaterThan(0)) {
-    const returnPct = pnlDec.dividedBy(entryDec).toNumber();
+  if (position.exitWorkflow) {
+    const initiatedAt = Date.parse(position.exitWorkflow.initiatedAt);
+    const now = Date.parse(evaluatedAt);
+    const deadlineMs = policy.exitAttemptDeadlineMinutes * 60_000;
+    if (
+      !Number.isFinite(initiatedAt) ||
+      !Number.isFinite(now) ||
+      (now - initiatedAt >= deadlineMs && position.exitWorkflow.lastStatus !== "ACCEPTED")
+    ) {
+      return {
+        shouldExit: true,
+        action: "ESCALATE",
+        reason: `[FAIL-CLOSED] Exit workflow missed its ${policy.exitAttemptDeadlineMinutes}-minute acceptance deadline after ${position.exitWorkflow.attempts} attempt(s).`,
+        suggestedExitLegs,
+      };
+    }
+  }
+
+  // Start no later than one calendar day before expiration to avoid assignment-day dependence.
+  if (position.dte <= 1) {
+    return {
+      shouldExit: true,
+      action: "EXIT_EXPIRATION_DEADLINE",
+      reason: `Position reached the pre-expiration exit boundary (DTE: ${position.dte}).`,
+      suggestedExitLegs,
+    };
+  }
+
+  const entryValue = entryDec.times(Math.abs(position.qty)).times(100);
+
+  if (entryValue.greaterThan(0)) {
+    const returnPct = pnlDec.dividedBy(entryValue).toNumber();
 
     // 50% profit target
     if (returnPct >= 0.50) {
@@ -49,6 +100,7 @@ export function evaluatePositionExit(
         shouldExit: true,
         action: "EXIT_PROFIT_TARGET",
         reason: `Target profit reached (+${(returnPct * 100).toFixed(1)}%). Closing position to harvest gain.`,
+        suggestedExitLegs,
       };
     }
 
@@ -58,6 +110,7 @@ export function evaluatePositionExit(
         shouldExit: true,
         action: "EXIT_STOP_LOSS",
         reason: `Stop loss threshold triggered (${(returnPct * 100).toFixed(1)}%). Closing position.`,
+        suggestedExitLegs,
       };
     }
   }

@@ -31,6 +31,11 @@ const mockPolicy: Policy = {
   invariants: ["COV-01"],
 };
 
+const legs: OpenPositionState["legs"] = [
+  { symbol: "SPY260918C00500000", ratioQty: 1, side: "buy", positionIntent: "buy_to_open" },
+  { symbol: "SPY260918C00505000", ratioQty: 1, side: "sell", positionIntent: "sell_to_open" },
+];
+
 describe("Position Monitor", () => {
   it("triggers exit when 50% profit target is reached", () => {
     const position: OpenPositionState = {
@@ -42,7 +47,7 @@ describe("Position Monitor", () => {
       unrealizedPnl: "240.00", // +60% return
       expiry: "2026-09-18",
       dte: 10,
-      legs: [],
+      legs,
     };
 
     const evalResult = evaluatePositionExit(position, mockPolicy);
@@ -60,7 +65,7 @@ describe("Position Monitor", () => {
       unrealizedPnl: "-200.00", // -100% loss
       expiry: "2026-09-18",
       dte: 5,
-      legs: [],
+      legs,
     };
 
     const evalResult = evaluatePositionExit(position, mockPolicy);
@@ -68,7 +73,7 @@ describe("Position Monitor", () => {
     expect(evalResult.action).toBe("EXIT_STOP_LOSS");
   });
 
-  it("triggers exit when expiration deadline is reached (DTE <= 0)", () => {
+  it("triggers exit one day before expiration", () => {
     const position: OpenPositionState = {
       symbol: "SPY_SPREAD_1",
       underlying: "SPY",
@@ -77,8 +82,8 @@ describe("Position Monitor", () => {
       currentPrice: "2.10",
       unrealizedPnl: "10.00",
       expiry: "2026-08-30",
-      dte: 0,
-      legs: [],
+      dte: 1,
+      legs,
     };
 
     const evalResult = evaluatePositionExit(position, mockPolicy);
@@ -96,11 +101,32 @@ describe("Position Monitor", () => {
       unrealizedPnl: "20.00", // +10% return
       expiry: "2026-09-18",
       dte: 15,
-      legs: [],
+      legs,
     };
 
     const evalResult = evaluatePositionExit(position, mockPolicy);
     expect(evalResult.shouldExit).toBe(false);
     expect(evalResult.action).toBe("HOLD");
+  });
+
+  it("escalates when the close workflow misses its acceptance deadline", () => {
+    const position: OpenPositionState = {
+      symbol: "SPY_SPREAD_1", underlying: "SPY", qty: 1,
+      entryPrice: "2.00", currentPrice: "1.90", unrealizedPnl: "-10.00",
+      expiry: "2026-09-18", dte: 5, legs,
+      exitWorkflow: { initiatedAt: "2026-08-30T14:00:00Z", attempts: 3, lastStatus: "REJECTED" },
+    };
+    const result = evaluatePositionExit(position, mockPolicy, "2026-08-30T14:16:00Z");
+    expect(result.action).toBe("ESCALATE");
+    expect(result.suggestedExitLegs?.[0].positionIntent).toBe("sell_to_close");
+  });
+
+  it("fails closed on incomplete position state", () => {
+    const position: OpenPositionState = {
+      symbol: "SPY_SPREAD_1", underlying: "SPY", qty: 1,
+      entryPrice: "2.00", currentPrice: "2.00", unrealizedPnl: "0.00",
+      expiry: "2026-09-18", dte: 5, legs: [],
+    };
+    expect(evaluatePositionExit(position, mockPolicy).action).toBe("ESCALATE");
   });
 });

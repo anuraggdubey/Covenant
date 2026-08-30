@@ -16,29 +16,30 @@ export async function GET() {
       status: "healthy",
       timestamp: new Date().toISOString(),
       environment: env.NODE_ENV,
-      mode: env.ALPACA_PAPER === "true" ? "PAPER_TRADING_LOCKED" : "UNKNOWN",
+      mode: env.ALPACA_MOCK_MODE === "true" ? "SYNTHETIC_MOCK" : "PAPER_TRADING",
       alpaca: {
         connected: true,
         tradingBaseUrl: env.ALPACA_TRADING_BASE_URL,
         dataBaseUrl: env.ALPACA_DATA_BASE_URL,
-        feed: env.ALPACA_DATA_FEED,
+        optionFeed: env.ALPACA_DATA_FEED,
+        stockFeed: env.ALPACA_STOCK_DATA_FEED,
         marketOpen: clock.is_open,
         accountStatus: account.status,
         optionsApprovedLevel: account.options_approved_level,
         equity: account.equity,
       },
       invariants: {
-        failClosed: true,
-        powerlessAlpha: true,
+        alphaReadClientHasNoWriteMethods: true,
+        permitExecutorImplemented: false,
         level3OptionsApproved: account.options_approved_level >= 3,
       },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
+    console.error("Health check failed", err);
     return NextResponse.json(
       {
         status: "degraded",
-        error: message,
+        error: "Health check unavailable",
         timestamp: new Date().toISOString(),
       },
       { status: 500 }

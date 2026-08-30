@@ -13,6 +13,10 @@ async function main() {
 
   try {
     const result = await executeTick();
+    console.log(`\n[DATA MODE] ${result.dataMode}`);
+    if (result.dataMode === "SYNTHETIC_MOCK") {
+      console.log("  Synthetic fixtures only. These intents are not live or historical evidence.");
+    }
 
     console.log("\n[MARKET CLOCK]");
     console.log(`  Status:    ${result.clock.isOpen ? "OPEN" : "CLOSED"}`);

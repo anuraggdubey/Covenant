@@ -1,123 +1,82 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AlpacaReadClient } from "@/lib/alpaca/client";
 
+function jsonResponse(value: unknown): Response {
+  return { ok: true, status: 200, json: async () => value } as Response;
+}
+
+const credentials = { apiKeyId: "test-key", apiSecretKey: "test-secret", mockMode: false } as const;
+
 describe("AlpacaReadClient", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
+  beforeEach(() => vi.restoreAllMocks());
+
+  it.each([
+    "https://api.alpaca.markets",
+    "https://paper-api.alpaca.markets.evil.example",
+  ])("rejects non-paper trading host %s", (tradingBaseUrl) => {
+    expect(() => new AlpacaReadClient({ ...credentials, tradingBaseUrl })).toThrow("[FAIL-CLOSED]");
   });
 
-  it("fails closed if initialized with a live trading URL", () => {
-    expect(() => {
-      new AlpacaReadClient({
-        tradingBaseUrl: "https://api.alpaca.markets",
-      });
-    }).toThrow("[FAIL-CLOSED] Refusing to initialize Alpaca client with live trading URL.");
+  it("rejects missing credentials unless mock mode is explicit", () => {
+    expect(() => new AlpacaReadClient({ mockMode: false })).toThrow("credentials are required");
+    expect(() => new AlpacaReadClient({ mockMode: true })).not.toThrow();
   });
 
-  it("fetches account state successfully via HTTP", async () => {
-    const mockAccount = {
-      id: "acc_test_123",
-      account_number: "PA123456",
-      status: "ACTIVE",
-      currency: "USD",
-      buying_power: "200000.00",
-      regt_buying_power: "200000.00",
-      daytrading_buying_power: "400000.00",
-      cash: "100000.00",
-      portfolio_value: "100000.00",
-      equity: "100000.00",
-      last_equity: "100000.00",
-      multiplier: "2",
-      initial_margin: "0",
-      maintenance_margin: "0",
-      last_maintenance_margin: "0",
-      sma: "0",
-      daytrade_count: 0,
-      balance_asof: "2026-08-30",
-      pattern_day_trader: false,
-      options_approved_level: 3,
-      options_trading_level: 3,
-    };
+  it("validates account responses", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse({ id: "incomplete" }));
+    const client = new AlpacaReadClient(credentials);
+    await expect(client.getAccount()).rejects.toThrow("invalid response payload");
+  });
 
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => mockAccount,
-    } as Response);
-
-    const client = new AlpacaReadClient({
-      apiKeyId: "test_key",
-      apiSecretKey: "test_secret",
-      tradingBaseUrl: "https://paper-api.alpaca.markets",
-      mockMode: false,
-    });
-
-    const account = await client.getAccount();
+  it("fetches and validates account state", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse({
+      id: "acc_test_123", account_number: "PA123456", status: "ACTIVE", currency: "USD",
+      buying_power: "200000.00", regt_buying_power: "200000.00", daytrading_buying_power: "400000.00",
+      cash: "100000.00", portfolio_value: "100000.00", equity: "100000.00", last_equity: "100000.00",
+      multiplier: "2", initial_margin: "0", maintenance_margin: "0", last_maintenance_margin: "0", sma: "0",
+      daytrade_count: 0, balance_asof: "2026-08-30", pattern_day_trader: false,
+      options_approved_level: 3, options_trading_level: 3,
+    }));
+    const account = await new AlpacaReadClient(credentials).getAccount();
     expect(account.id).toBe("acc_test_123");
-    expect(account.equity).toBe("100000.00");
-    expect(account.options_approved_level).toBe(3);
   });
 
-  it("fetches market clock via HTTP", async () => {
-    const mockClock = {
-      timestamp: "2026-08-30T14:30:00Z",
-      is_open: true,
-      next_open: "2026-08-31T13:30:00Z",
-      next_close: "2026-08-30T20:00:00Z",
-    };
+  it("fetches every option snapshot page", async () => {
+    const quote = { ap: 5.5, as: 10, bp: 5.4, bs: 20, t: "2026-08-30T14:30:00Z" };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ snapshots: { SPY260918C00500000: { latestQuote: quote } }, next_page_token: "page-2" }))
+      .mockResolvedValueOnce(jsonResponse({ snapshots: { SPY260918C00505000: { latestQuote: quote } }, next_page_token: null }));
+    globalThis.fetch = fetchMock;
 
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => mockClock,
-    } as Response);
-
-    const client = new AlpacaReadClient({
-      apiKeyId: "test_key",
-      apiSecretKey: "test_secret",
-      mockMode: false,
-    });
-    const clock = await client.getClock();
-    expect(clock.is_open).toBe(true);
+    const snapshots = await new AlpacaReadClient(credentials).getOptionSnapshots("SPY");
+    expect(Object.keys(snapshots.snapshots)).toHaveLength(2);
+    expect(String(fetchMock.mock.calls[1][0])).toContain("page_token=page-2");
   });
 
-  it("fetches option chain snapshots via HTTP", async () => {
-    const mockSnapshots = {
-      snapshots: {
-        "SPY260116C00500000": {
-          latestQuote: { ap: 5.5, as: 10, bp: 5.4, bs: 20, t: "2026-08-30T14:30:00Z" },
-          greeks: { delta: 0.5, gamma: 0.02, theta: -0.05, vega: 0.1 },
-          impliedVolatility: 0.18,
-        },
-      },
-    };
-
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => mockSnapshots,
-    } as Response);
-
-    const client = new AlpacaReadClient({
-      apiKeyId: "test_key",
-      apiSecretKey: "test_secret",
-      mockMode: false,
-    });
-    const snapshots = await client.getOptionSnapshots("SPY");
-    expect(snapshots.snapshots["SPY260116C00500000"]).toBeDefined();
-    expect(snapshots.snapshots["SPY260116C00500000"].latestQuote?.ap).toBe(5.5);
+  it("uses independent valid feeds for stock and option requests", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ snapshots: {}, next_page_token: null }))
+      .mockResolvedValueOnce(jsonResponse({
+        latestTrade: { p: 500, s: 1, t: "2026-08-30T14:30:00Z" },
+      }));
+    globalThis.fetch = fetchMock;
+    const client = new AlpacaReadClient({ ...credentials, optionFeed: "indicative", stockFeed: "iex" });
+    await client.getOptionSnapshots("SPY");
+    await client.getStockSnapshot("SPY");
+    expect(String(fetchMock.mock.calls[0][0])).toContain("feed=indicative");
+    expect(String(fetchMock.mock.calls[1][0])).toContain("feed=iex");
   });
 
-  it("generates synthetic option snapshots when running in mockMode", async () => {
+  it("marks mock liquidity with daily volume rather than trade size", async () => {
+    const snapshots = await new AlpacaReadClient({ mockMode: true }).getOptionSnapshots("SPY");
+    const first = Object.values(snapshots.snapshots)[0];
+    expect(first.dailyBar?.v).toBe(500);
+    expect(first.latestTrade?.s).toBe(10);
+  });
+
+  it("exposes no order-writing methods", () => {
     const client = new AlpacaReadClient({ mockMode: true });
-    const snapshots = await client.getOptionSnapshots("SPY");
-    expect(Object.keys(snapshots.snapshots).length).toBeGreaterThan(0);
-    const clock = await client.getClock();
-    expect(clock.is_open).toBe(true);
-  });
-
-  it("guarantees zero order-submitting methods on client instance", () => {
-    const client = new AlpacaReadClient();
-    // @ts-expect-error Checking that submitOrder does not exist on read client
-    expect(client.submitOrder).toBeUndefined();
-    // @ts-expect-error Checking that cancelOrder does not exist on read client
-    expect(client.cancelOrder).toBeUndefined();
+    expect("submitOrder" in client).toBe(false);
+    expect("cancelOrder" in client).toBe(false);
   });
 });

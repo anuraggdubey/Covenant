@@ -1,147 +1,117 @@
 # Covenant — Proof-Carrying Options Agent
 
-> **Status:** Active Development · **Paper Trading Only** · **Alpaca AI Trading Agents Hackathon**
+> **Status:** Active · **Paper Trading Only** · **Alpaca AI Trading Agents Hackathon**
 
-Covenant is a proof-carrying options agent that compiles plain-English trader mandates into versioned, typed policies, stress-tests those policies before activation, and lets an Alpha Engine propose defined-risk SPY/QQQ vertical spreads that it **cannot execute**. Only a separate, isolated Permit Executor holding paper credentials can submit orders matching short-lived, signed `TradePermit`s.
+Covenant compiles plain-English trader mandates into versioned, typed policies, stress-tests them with adversarial counterexamples, and lets an Alpha Engine propose defined-risk SPY/QQQ vertical spreads that it **cannot execute** without a signed, short-lived `TradePermit`.
 
 ---
 
-## 🏛️ Architecture & The Three Lanes
+## 🏛️ Lane Ownership & System Boundaries
 
-| Lane | Owner | Scope | Boundary Constraint |
+| Lane | Owner | Scope | Authority Invariant |
 | :--- | :--- | :--- | :--- |
-| **Lane A — Alpha & Market Data** | **Anurag** | Alpaca read client, snapshot ingestion & canonical hashing, candidate factory, payoff & max-loss engine, signals, ranking, `TradeIntent` emission, position monitor, autonomous loop (`npm run tick`), and dashboard pages. | **Powerless by construction.** Strategy and alpha code never touch broker write credentials. |
-| **Lane B — Safety, Permits & Proof** | **Demilade** | Policy compiler, contradiction checks, Safety Kernel (`COV-01`…`COV-08`), permit signing/verification, Permit Executor (the **only** order write path), event journal, replay verifier, Break Me engine, and Shadow Ledger. | Strategy-blind. Evaluates invariants deterministically; cannot widen trades or generate strategies. |
-| **Lane C — Product & Validation** | **Trading Advisor** | Mandate corpus, risk profiles calibration, walk-forward validation summary, demo script, and adversarial cold-run QA. | Narrative & validation anchor. |
+| **Lane A — Alpha & Market Data** | **Anurag** | Alpaca read client, snapshot hashing, candidate factory, payoff/max-loss math, ranking, `TradeIntent` emission, position monitor, autonomous loop (`npm run tick`), and all 8 frontend pages. | **Powerless by construction:** Never holds broker write credentials. |
+| **Lane B — Safety, Permits & Proof** | **Demilade** | Safety Kernel (`COV-01`…`COV-08`), permit signing, Permit Executor (the **only** order write path), replay verifier, Break Me engine, and Shadow Ledger. | Strategy-blind deterministic gatekeeper. |
+| **Lane C — Product & Validation** | **Trading Advisor** | Mandate corpus, risk calibration, 90s demo script, adversarial QA. | Narrative & validation anchor. |
 
 ---
 
-## 🚀 Lane A: Alpha & Market Data (Deep Dive)
+## 🧭 System Navigation (The 8 Product Pages)
 
-Lane A provides the complete market intelligence, options candidate generation, risk modeling, and autonomous tick loop.
+The app is accessible locally at `http://localhost:3000`:
 
-### 1. The Alpha Pipeline
+1. **Overview (`/`):** Real-time system telemetry, $100k paper account health, the 8 enforced invariants (`COV-01`…`COV-08`), and a 1-click **"⚡ Run Autonomous Tick"** console.
+2. **Candidate Lab (`/candidates`):** Real-time SPY & QQQ option chain browser, ranked vertical spreads, payoff distributions, and OCC leg breakdowns.
+3. **Mandate Studio (`/mandates`):** Plain-English mandate editor, contradiction checks, and compiled policy JSON echo.
+4. **Break Me (`/break-me`):** Property testing coverage viewer across 5 adversarial attack vectors.
+5. **Permit Console (`/permits`):** Cryptographic TradePermit inspector showing live TTLs, nonces, exact legs, and Ed25519 signatures.
+6. **Execution Blotter (`/execution`):** Alpaca paper multi-leg order blotter, open positions with 50% profit target / stop loss monitors, and emergency kill-switch.
+7. **Proof Explorer (`/proof`):** Append-only hash-chained event timeline with 1-click run manifest replay verification.
+8. **Shadow Ledger (`/shadow-ledger`):** Governed vs unconstrained shadow P&L comparison with exact rule-level dollar attribution.
+
+---
+
+## ⚡ How Lane A Works (The Alpha Pipeline)
 
 ```txt
-   Alpaca Paper REST API / Mock Feed
-                  │
-                  ▼
-         [AlpacaReadClient] ──────────> Read-only (/v2/clock, /v2/account, options snapshots)
-                  │
-                  ▼
-         [Snapshot Ingestion] ────────> Parse OCC contracts & compute SHA-256 canonical hashes
-                  │
-                  ▼
-         [Candidate Factory] ─────────> Filter DTE, delta, liquidity, quotes (≤60s), width;
-                                        assemble legal defined-risk spreads
-                  │
-                  ▼
-         [Payoff & Max-Loss] ─────────> Decimal-exact standalone max loss, max gain, & limit price
-                  │
-                  ▼
-         [Signals & Sizing] ──────────> 5d/20d SMA trend & 20d realized vol; size within 2% risk cap
-                  │
-                  ▼
-     [Alpha Engine: propose()] ───────> Emit verifiable TradeIntent (with canonical intentHash)
-                                        OR fail-closed ABSTAIN
-                  │
-                  ▼
-         [Position Monitor] ──────────> Track open positions for 50% profit, 100% loss, or expiry
+1. Alpaca Read Client ──> Fetches /v2/clock, /v2/account, and SPY/QQQ option chains (Zero write methods).
+           │
+2. Snapshot Hashing   ──> Normalizes OCC contracts and generates SHA-256 canonical hashes for tamper detection.
+           │
+3. Candidate Factory  ──> Filters chains by DTE (7-45d), delta (0.2-0.8), quote freshness (≤60s), and spread width.
+                          Assembles defined-risk spreads: Bull Call Debit, Bear Put Debit, and Credit Verticals.
+           │
+4. Payoff Engine      ──> Computes standalone max loss, max gain, and limit price via exact Decimal arithmetic.
+           │
+5. Signals & Sizing   ──> Computes 5d/20d SMA trends & 20d realized vol. Sizes trade within 2% equity risk cap ($2k).
+                          Applies model confidence multiplier [0, 1] (veto or shrink only).
+           │
+6. propose() Emission ──> Emits a verifiable TradeIntent with canonical intentHash OR returns fail-closed ABSTAIN.
+           │
+7. Position Monitor   ──> Tracks open positions for +50% profit target, -100% stop loss, or expiration exit.
 ```
 
 ---
 
-### 2. Module Guide for Contributors
+## 🔌 How Contributors Interact with Lane A
 
-All Lane A code is organized under `lib/` and is fully typed against `types/domain.ts`:
+Lane B and testing scripts consume Lane A through clean, frozen interfaces:
 
-#### A. Alpaca Read Client (`lib/alpaca/`)
-- [`lib/alpaca/client.ts`](file:///c:/Projects/Covenant/lib/alpaca/client.ts): Server-only client accessing `/v2/account`, `/v2/clock`, `/v2/assets`, `/v2/stocks/snapshot`, `/v2/stocks/bars`, and `/v1beta1/options/snapshots/{underlying}`.
-- **Guaranteed:** Contains **zero** order-submitting or mutating methods.
-- **Mock Mode:** Built-in `ALPACA_MOCK_MODE=true` generates realistic synthetic option chains and account snapshots for offline and weekend testing without API keys.
-
-#### B. Alpha Engine & Sizing (`lib/alpha/`)
-- [`lib/alpha/occ.ts`](file:///c:/Projects/Covenant/lib/alpha/occ.ts): OCC contract symbol parser (`parseOccSymbol`) and round-trip formatter (`formatOccSymbol`).
-- [`lib/alpha/canonical.ts`](file:///c:/Projects/Covenant/lib/alpha/canonical.ts): Key-sorted canonical JSON serializer and SHA-256 hasher.
-- [`lib/alpha/snapshots.ts`](file:///c:/Projects/Covenant/lib/alpha/snapshots.ts): Builds and cryptographically hashes `MarketSnapshot` and `AccountSnapshot` with point-in-time tamper detection (`verifySnapshotHash`).
-- [`lib/alpha/payoff.ts`](file:///c:/Projects/Covenant/lib/alpha/payoff.ts): Standalone max loss, max gain, and limit price calculations using `Decimal` math.
-- [`lib/alpha/factory.ts`](file:///c:/Projects/Covenant/lib/alpha/factory.ts): Filters option chains into valid defined-risk vertical spreads (**Bull Call Debit**, **Bear Put Debit**, and **Credit Verticals**).
-- [`lib/alpha/signals.ts`](file:///c:/Projects/Covenant/lib/alpha/signals.ts): 5d/20d SMA trend detection and 20-day annualized realized volatility.
-- [`lib/alpha/ranking.ts`](file:///c:/Projects/Covenant/lib/alpha/ranking.ts): Sizes trades to stay under `perTradeMaxLossPct` (e.g. 2%) and portfolio heat caps (e.g. 6%); applies model confidence multiplier $\in [0, 1]$ (veto/shrink only).
-- [`lib/alpha/engine.ts`](file:///c:/Projects/Covenant/lib/alpha/engine.ts): Implements the frozen domain interface:
-  ```ts
-  propose(policy: Policy, market: MarketSnapshot, account: AccountSnapshot):
-    Promise<{ intent: TradeIntent } | { abstain: true; reason: string }>;
-  ```
-- [`lib/alpha/loop.ts`](file:///c:/Projects/Covenant/lib/alpha/loop.ts): Unified autonomous tick orchestrator.
-
-#### C. Position Monitor (`lib/monitor/`)
-- [`lib/monitor/position-monitor.ts`](file:///c:/Projects/Covenant/lib/monitor/position-monitor.ts): Rule-based position monitor:
-  - Harvests profit at $+50\%$ (`EXIT_PROFIT_TARGET`)
-  - Enforces stop loss at $-100\%$ (`EXIT_STOP_LOSS`)
-  - Forces close when DTE $\le 0$ before expiration (`EXIT_EXPIRATION_DEADLINE`)
-
----
-
-### 3. How Other Lanes Consume Lane A
-
-#### For Lane B (Safety Kernel & Executor):
 ```ts
-import { propose, buildMarketSnapshot, buildAccountSnapshot } from "@/lib/alpha";
 import { AlpacaReadClient } from "@/lib/alpaca";
+import { propose, buildMarketSnapshot, buildAccountSnapshot } from "@/lib/alpha";
 
-// 1. Ingest read-only market state
-const readClient = new AlpacaReadClient();
-const rawAccount = await readClient.getAccount();
-const accountSnapshot = buildAccountSnapshot(rawAccount);
+// 1. Fetch read-only market state
+const client = new AlpacaReadClient();
+const accountSnapshot = buildAccountSnapshot(await client.getAccount());
+const marketSnapshot = buildMarketSnapshot("SPY", "500.00", await client.getOptionSnapshots("SPY"));
 
-const rawOptions = await readClient.getOptionSnapshots("SPY");
-const marketSnapshot = buildMarketSnapshot("SPY", "500.00", rawOptions);
+// 2. Propose TradeIntent or Abstain
+const result = await propose(activePolicy, marketSnapshot, accountSnapshot);
 
-// 2. Alpha Engine proposes TradeIntent or ABSTAIN
-const proposal = await propose(activePolicy, marketSnapshot, accountSnapshot);
-
-if ("intent" in proposal) {
-  // Pass proposal.intent to Lane B's Safety Kernel (evaluate(intent, policy))
-  const kernelResult = await evaluate(proposal.intent, activePolicy);
+if ("intent" in result) {
+  // Pass result.intent to Lane B Safety Kernel
+  console.log("Intent proposed:", result.intent.id, result.intent.intentHash);
+} else {
+  console.log("Abstained:", result.reason);
 }
 ```
 
 ---
 
-## 🛠️ Getting Started & Commands
+## 💻 Essential Commands
 
-### 1. Installation
 ```bash
-npm install
+# 1. Start Web Dashboard (all 8 interactive pages)
+npm run dev
+
+# 2. Run Autonomous Tick Loop (CLI output of clock, snapshots, ranking & TradeIntents)
+npm run tick
+
+# 3. Run Test Suite (32 tests across 9 suites, including fast-check property tests)
+npm run test
+
+# 4. Run 2-Year Walk-Forward Signal Validation
+npm run validate:walk-forward
+
+# 5. Typecheck & Production Build
+npm run typecheck
+npm run build
 ```
-
-### 2. Configure Environment (Optional)
-Copy `.env.example` to `.env.local`:
-```bash
-cp .env.example .env.local
-```
-*Note: If no API keys are provided in `.env.local`, Covenant runs automatically in **Mock Mode**, allowing complete testing and demonstration.*
-
-### 3. Key Commands
-
-| Command | Description |
-| :--- | :--- |
-| **`npm run tick`** | Runs the autonomous tick loop (`scripts/tick.ts`), logging clock, snapshots, ranking, max loss, and generated `TradeIntent`s. |
-| **`npm run test`** | Executes the full Vitest suite (8 test suites, 30 tests including `fast-check` property tests). |
-| **`npm run typecheck`** | Validates strict TypeScript compilation (`tsc --noEmit`). |
-| **`npm run build`** | Builds the Next.js production app. |
-| **`npm run dev`** | Starts the local Next.js development server at `http://localhost:3000`. |
 
 ---
 
-## 🧪 Testing & Property Invariants
+## ⚙️ Environment Configuration
 
-Lane A is thoroughly tested across 8 test suites:
-- **Property-based tests (`tests/alpha/factory.test.ts`):** Proves mathematically via `fast-check` that candidate factory *never* emits undefined-risk spreads, *never* emits unknown symbols, and *always* outputs finite positive max loss.
-- **Payoff exactness (`tests/alpha/payoff.test.ts`):** Validated against hand-computed values with zero floating-point drift.
-- **Cryptographic integrity (`tests/alpha/snapshots.test.ts`):** Validates deterministic key-sorted JSON hashing and tamper detection.
-- **Fail-closed checks (`tests/alpha/engine.test.ts`):** Verifies `ABSTAIN` returns when state is missing, stale, tampered, or below Level 3 options.
+- **Mock Mode (Default):** If no `.env.local` is provided, the app automatically runs in **Mock Mode** (`ALPACA_MOCK_MODE=true`), allowing full offline and weekend testing without API keys.
+- **Live Paper Trading:** Create `.env.local` with:
+  ```env
+  ALPACA_API_KEY_ID=your_paper_key
+  ALPACA_API_SECRET_KEY=your_paper_secret
+  ALPACA_TRADING_BASE_URL=https://paper-api.alpaca.markets
+  ALPACA_DATA_BASE_URL=https://data.alpaca.markets
+  ALPACA_MOCK_MODE=false
+  ```
 
 ---
 

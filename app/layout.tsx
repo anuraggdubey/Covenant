@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Navigation } from "@/components/Navigation";
 import { TelemetryHeader } from "@/components/TelemetryHeader";
+import { MarketTicker } from "@/components/MarketTicker";
 
 export const metadata: Metadata = {
   title: "Covenant — Proof-Carrying Options Agent",
@@ -17,6 +18,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Navigation />
+        <MarketTicker />
         <TelemetryHeader />
         <main>{children}</main>
       </body>

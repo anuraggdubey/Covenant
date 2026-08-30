@@ -237,6 +237,7 @@ export interface TradePermit {
 export interface KernelResult {
   decision: Decision;
   permit?: TradePermit;
+  finalIntent?: TradeIntent;   // the intent the permit is bound to (rebuilt on SHRINK)
   shrunkQuantity?: number;
   failedInvariants: string[];        // e.g. ["COV-03"]
   reason: string;                    // human-readable, shown on the dashboard
@@ -331,8 +332,8 @@ Format: `ID · owner · depends-on · exit test`. Claim a task by putting your i
 **Shared — today, first**
 
 - `T-00` · All · — · Paper account fresh, $100k, Level 3 confirmed, manual multi-leg order ID and account ID recorded in `docs/day1-evidence.md`.
-- `T-01` · A+B · T-00 · Exact-pinned deps, Zod, Vitest, Drizzle + Neon, `.env.example`, fail-closed env validation, `lib/` skeleton. `npm run typecheck && npm run build` green.
-- `T-02` · B · — · `types/domain.ts` and Zod mirrors committed; freeze announced.
+- `T-01` · A+B · T-00 · 🟡 **PARTIAL (DA, 30 Aug)** — done: exact-pinned deps, Zod, Vitest, fast-check, tsx, `.env.example`, fail-closed env validation (`lib/env.ts`, paper-host allowlist), `lib/` skeleton, TS target ES2022. **Not done: Drizzle + Neon Postgres.** `npm run typecheck && npm run build` green.
+- `T-02` · B · — · ✅ **DONE (DA, 30 Aug)** — `types/domain.ts` committed and frozen, including `MarketSnapshot` / `AccountSnapshot` / `OptionContract` / `OpenPosition` that Lane A needs. One amendment logged (`KernelResult.finalIntent`). Zod mirrors still to land with the route handlers.
 
 **Lane A — Anurag**
 
@@ -348,10 +349,10 @@ Format: `ID · owner · depends-on · exit test`. Claim a task by putting your i
 
 **Lane B — Demilade**
 
-- `T-B1` · T-02 · Eight invariant evaluators, one file each, one property test each. COV-03 sums standalone envelopes (a conservative upper bound) — do not attempt true portfolio risk.
-- `T-B2` · T-B1 · Session state machine `ACTIVE → HALTED`, reset only on a verified new session from `/v2/clock`. Test the reset path explicitly.
-- `T-B3` · T-02 · Ed25519 permit signing (`node:crypto`), 60s TTL, nonce store, single-use marking after an accepted submission attempt.
-- `T-B4` · T-B3 · Permit Executor. Verifies signature, TTL, nonce, policy hash, both snapshot hashes, intent hash, exact legs, quantity ceiling, and price band — then submits `order_class: "mleg"`. Records Alpaca `order_id` and `X-Request-ID`.
+- `T-B1` · T-02 · ✅ **DONE (DA, 30 Aug)** — eight evaluators in `lib/safety/invariants/cov-0n.ts`, registry in `index.ts` (COV-08 first), tested in `tests/safety/invariants.test.ts`. COV-03 sums standalone envelopes as a conservative upper bound.
+- `T-B2` · T-B1 · ✅ **DONE (DA, 30 Aug)** — `lib/safety/session.ts`. Reset requires a different `sessionDate` from the broker clock; a mismatch between stored session state and clock abstains rather than resetting.
+- `T-B3` · T-02 · ✅ **DONE (DA, 30 Aug)** — `lib/permits/{sign,verify,nonce}.ts`. Private key read in `sign.ts` only; executor holds the public half. Nonce is consumed after validation and immediately before the network call, so a rejected permit never burns its nonce.
+- `T-B4` · T-B3 · 🟡 **PARTIAL (DA, 30 Aug)** — `lib/execution/executor.ts` written and all fourteen checks tested; the four judge attacks each reject with **zero transport calls** (`tests/execution/executor.attacks.test.ts`). **Still open: no real Alpaca paper order has been submitted** — blocked on `T-00` credentials and Level 3 approval. The second half of Day 4's exit test is not met until that order ID exists.
 - `T-B5` · T-B4 · Hash-chained event journal, every event type from `next-steps.md`, append-only.
 - `T-B6` · T-B5 · Kill switch: halt entries, optionally cancel open orders, fail closed on error.
 - `T-B7` · T-C1 · Mandate compiler and contradiction checks. The model drafts; schema validation and explicit activation make it live.
@@ -480,6 +481,8 @@ Decided now so nobody spends Day 4 re-litigating them.
 | 30 Aug 2026 | Verifier is TypeScript, not Python | A second runtime breaks the 10-minute setup requirement | Both leads |
 | 30 Aug 2026 | Neon Postgres + Drizzle; SQLite rejected | Vercel's filesystem is ephemeral; judges need a deployed dashboard | Both leads |
 | 30 Aug 2026 | All dependencies pinned exactly | `latest` contradicts our own reproducibility claim | Both leads |
+| 30 Aug 2026 | `KernelResult.finalIntent` added to the frozen set | A SHRINK rebuilds the intent (new size, new max loss, new hash). Without returning it the executor cannot submit the intent the permit signed, so SHRINK was unusable. Additive field, no existing consumer breaks. | Demilade |
+| 30 Aug 2026 | TS target ES2017 → ES2022 | Money is fixed-point BigInt; BigInt literals need ES2020+ | Demilade |
 
 ---
 

@@ -20,7 +20,7 @@ export function PayoffChart({
   const entryAmount = Number.isFinite(signedPrice) ? Math.abs(signedPrice).toFixed(2) : limitPrice;
 
   return (
-    <div style={{ background: "rgba(0,0,0,0.5)", borderRadius: "8px", padding: "16px", border: "1px solid var(--border-subtle)" }}>
+    <div style={{ background: "var(--surface-sunken)", borderRadius: "8px", padding: "16px", border: "1px solid var(--border-subtle)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", gap: "12px", flexWrap: "wrap" }}>
         <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>
           Expiration Payoff Envelope

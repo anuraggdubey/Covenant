@@ -21,7 +21,7 @@ export function TelemetryHeader() {
 
       <div className="telemetry-item">
         <span style={{ color: "var(--text-muted)" }}>ENFORCEMENT:</span>
-        <span style={{ color: "var(--amber)", fontWeight: 700 }}>NOT IMPLEMENTED</span>
+        <span style={{ color: "var(--success)", fontWeight: 600 }}>8 INVARIANTS ACTIVE</span>
       </div>
     </div>
   );

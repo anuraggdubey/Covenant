@@ -1,124 +1,209 @@
-"use client";
+import manifest from "@/demo/run_manifest.json";
+import { verifyManifest } from "@/lib/audit/verify";
+import type { RunManifest } from "@/types/domain";
 
-import { useState, useEffect } from "react";
+export const metadata = {
+  title: "Proof Explorer — Covenant"
+};
 
-interface HealthData {
-  alpaca?: {
-    equity: string;
-    accountStatus: string;
-    optionsApprovedLevel: number;
-  };
+const report = verifyManifest(manifest as unknown as RunManifest);
+const run = manifest as unknown as RunManifest;
+
+function shortHash(hash: string | null): string {
+  if (hash === null || hash === "") return "—";
+  return `${hash.slice(0, 10)}…${hash.slice(-6)}`;
+}
+
+const EVENT_TONE: Record<string, string> = {
+  PERMIT_SIGNED: "badge-emerald",
+  ORDER_SUBMITTED: "badge-emerald",
+  ORDER_ACCEPTED: "badge-emerald",
+  POLICY_ACTIVATED: "badge-cyan",
+  MARKET_SNAPSHOT_RECORDED: "badge-cyan",
+  ACCOUNT_SNAPSHOT_RECORDED: "badge-cyan",
+  TRADE_INTENT_CREATED: "badge-cyan",
+  KERNEL_REJECTED: "badge-rose",
+  KERNEL_ABSTAINED: "badge-amber",
+  PERMIT_REPLAY_REJECTED: "badge-rose",
+  HALT_TRIGGERED: "badge-amber"
+};
+
+function decisionSummary(payload: unknown): string | null {
+  if (typeof payload !== "object" || payload === null) return null;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.reason === "string") return p.reason;
+  if (typeof p.orderId === "string") return `Alpaca order ${p.orderId}`;
+  return null;
 }
 
 export default function ProofExplorerPage() {
-  const [health, setHealth] = useState<HealthData | null>(null);
-  const [verifyResult, setVerifyResult] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/health")
-      .then((r) => r.json())
-      .then(setHealth)
-      .catch(() => setHealth(null));
-  }, []);
-
-  const runLiveVerification = async () => {
-    setVerifyResult("Verifying...");
-    try {
-      const res = await fetch("/api/candidates");
-      const data = await res.json();
-      if (data.underlyings?.length > 0) {
-        const hashes = data.underlyings.map((u: { underlying: string; marketSnapshotHash: string }) =>
-          `${u.underlying}: ${u.marketSnapshotHash?.slice(0, 32)}...`
-        );
-        setVerifyResult(
-          `✓ Verified ${data.underlyings.length} snapshot(s)\n` +
-          `Account Hash: ${data.account?.snapshotHash?.slice(0, 32)}...\n` +
-          hashes.join("\n")
-        );
-      } else {
-        setVerifyResult("⚠ No snapshots available to verify (market may be closed).");
-      }
-    } catch {
-      setVerifyResult("✗ Verification failed — could not fetch live data.");
-    }
-  };
-
-  const PROOF_CHAIN_CONCEPT = [
-    { event: "TICK_START", hash: "a3f7c9...", detail: "Clock fetched, session verified" },
-    { event: "ACCOUNT_SNAPSHOT", hash: "8b2d1e...", detail: "Equity $100,000.00 hashed with canonical JSON" },
-    { event: "MARKET_SNAPSHOT_SPY", hash: "c4e5f6...", detail: "SPY chain: 84 contracts, indicative feed" },
-    { event: "CANDIDATE_FACTORY", hash: "d7a8b9...", detail: "12 legal verticals generated, 0 undefined-risk" },
-    { event: "PROPOSAL_INTENT", hash: "e1f2g3...", detail: "BULL_CALL_DEBIT SPY 1x $2.50 limit" },
-    { event: "KERNEL_EVALUATE", hash: "—", detail: "Awaiting Lane B: Safety Kernel" },
-    { event: "PERMIT_SIGN", hash: "—", detail: "Awaiting Lane B: Ed25519 Signer" },
-    { event: "ORDER_SUBMIT", hash: "—", detail: "Awaiting Lane B: Permit Executor" },
-  ];
+  const reproduced = report.checks.filter((c) => c.label === "REPRODUCED");
+  const recorded = report.checks.filter((c) => c.label === "RECORDED");
 
   return (
-    <div className="page-container">
-      <div style={{ marginBottom: "28px" }}>
-        <div style={{ display: "inline-flex", gap: "8px", marginBottom: "8px" }}>
-          <span className="badge badge-cyan">PROOF EXPLORER</span>
-          <span className="badge badge-emerald">SNAPSHOT HASHING ACTIVE</span>
+    <main className="page-container">
+      <header style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <span className="badge badge-cyan">Proof Explorer</span>
+          <span className={`badge ${report.ok ? "badge-emerald" : "badge-rose"}`}>
+            {report.ok ? "Verified" : "Verification failed"}
+          </span>
         </div>
-        <h1 style={{ fontSize: "2.4rem", fontWeight: 900, letterSpacing: "-0.02em" }}>Proof Explorer</h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", maxWidth: "720px" }}>
-          Every decision in Covenant produces cryptographic evidence. Snapshot hashes verify data integrity,
-          intent hashes prove proposal authenticity, and the event chain links every action.
+        <h1>Every decision, replayable</h1>
+        <p style={{ maxWidth: "68ch" }}>
+          This page is the output of <code>npm run verify -- demo/run_manifest.json</code>, run
+          against the manifest committed to the repository. No credentials, no network. Anyone can
+          reproduce it from a fresh clone.
         </p>
+      </header>
+
+      {/* The distinction that keeps the claim honest. */}
+      <section className="glass-panel-glow">
+        <p className="eyebrow">How to read this</p>
+        <div className="grid-2" style={{ marginTop: 12 }}>
+          <div>
+            <span className="badge badge-cyan">Reproduced</span>
+            <p style={{ marginTop: 6 }}>
+              A deterministic check we re-ran here, now, from the recorded inputs — and got the same
+              answer. All eight invariants are re-evaluated against the recorded snapshots and
+              compared to the verdict that was stored at the time.
+            </p>
+          </div>
+          <div>
+            <span className="badge">Recorded</span>
+            <p style={{ marginTop: 6 }}>
+              A market or broker fact we captured. We can prove it has not been altered since. We
+              cannot prove it was true. Calling a quote &ldquo;verified&rdquo; would be a lie, so we
+              do not.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="telemetry-bar">
+        <div className="telemetry-item">
+          <span>Run</span>
+          <span className="mono">{report.runId}</span>
+        </div>
+        <div className="telemetry-item">
+          <span>Events</span>
+          <span>{run.events.length}</span>
+        </div>
+        <div className="telemetry-item">
+          <span>Checks passing</span>
+          <span style={{ color: report.ok ? "var(--success)" : "var(--danger)" }}>
+            {report.counts.passed}/{report.checks.length}
+          </span>
+        </div>
+        <div className="telemetry-item">
+          <span>Reproduced</span>
+          <span>{report.counts.reproduced}</span>
+        </div>
+        <div className="telemetry-item">
+          <span>Signing key</span>
+          <span className="mono">{run.signingKeyId || "—"}</span>
+        </div>
       </div>
 
-      {/* Live Hash Verification */}
-      <h2 style={{ fontSize: "1.3rem", fontWeight: 800, marginBottom: "16px" }}>Live Hash Verification</h2>
-      <div className="glass-panel" style={{ padding: "24px", marginBottom: "28px" }}>
-        <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "16px" }}>
-          Click to fetch live market and account snapshots, compute their canonical SHA-256 hashes, and verify integrity.
+      <section className="glass-panel">
+        <h2>Verification report</h2>
+        <small>
+          {report.counts.failed === 0
+            ? "Every check passed. A failure would be listed first."
+            : `${report.counts.failed} check(s) failed.`}
+        </small>
+        <div className="table-scroll" style={{ marginTop: 14 }}>
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: 70 }}>Result</th>
+                <th style={{ width: 108 }}>Label</th>
+                <th style={{ width: 92 }}>Event</th>
+                <th>Check</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...report.checks]
+                .sort((a, b) => Number(a.ok) - Number(b.ok))
+                .map((check, index) => (
+                  <tr key={`${check.id}-${check.eventId ?? "global"}-${index}`}>
+                    <td>
+                      <span className={`badge ${check.ok ? "badge-emerald" : "badge-rose"}`}>
+                        {check.ok ? "Pass" : "Fail"}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`badge ${check.label === "RECORDED" ? "" : "badge-cyan"}`}>
+                        {check.label === "RECORDED" ? "Recorded" : "Reproduced"}
+                      </span>
+                    </td>
+                    <td className="mono">{check.eventId ?? "—"}</td>
+                    <td>
+                      <strong style={{ color: "var(--text)", fontWeight: 600 }}>{check.id}</strong>
+                      <div style={{ color: "var(--text-secondary)" }}>{check.detail}</div>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="glass-panel">
+        <h2>Hash chain</h2>
+        <small>
+          Each event commits to the hash of the one before it. Editing or removing any event breaks
+          every hash after it — which is what stops an inconvenient veto being quietly dropped.
+        </small>
+        <div className="table-scroll" style={{ marginTop: 14 }}>
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: 78 }}>Event</th>
+                <th style={{ width: 210 }}>Type</th>
+                <th style={{ width: 150 }}>Hash</th>
+                <th style={{ width: 150 }}>Links to</th>
+                <th>Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              {run.events.map((event) => (
+                <tr key={event.eventId}>
+                  <td className="mono">{event.eventId}</td>
+                  <td>
+                    <span className={`badge ${EVENT_TONE[event.eventType] ?? ""}`}>
+                      {event.eventType.replace(/_/g, " ").toLowerCase()}
+                    </span>
+                  </td>
+                  <td className="mono">{shortHash(event.eventHash)}</td>
+                  <td className="mono">{shortHash(event.previousEventHash)}</td>
+                  <td>{decisionSummary(event.payload) ?? <span style={{ color: "var(--text-muted)" }}>—</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="glass-panel">
+        <h2>Reproduce it yourself</h2>
+        <small>From a fresh clone. Neither command needs a credential.</small>
+        <pre style={{ marginTop: 12 }}>
+          {`npm install
+npm run verify -- demo/run_manifest.json
+npm run audit`}
+        </pre>
+        <p style={{ marginTop: 12 }}>
+          {reproduced.length} deterministic checks and {recorded.length} recorded-integrity checks.
+          The manifest carries the public signing key only — never the half that could mint a new
+          permit.
         </p>
-        <button className="btn-primary" onClick={runLiveVerification}>
-          Run Live Verification
-        </button>
-        {verifyResult && (
-          <pre className="mono" style={{ marginTop: "16px", padding: "16px", background: "rgba(0,0,0,0.5)", borderRadius: "8px", color: "var(--emerald)", fontSize: "0.82rem", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
-            {verifyResult}
-          </pre>
-        )}
-      </div>
+      </section>
 
-      {/* Hash Chain Concept */}
-      <h2 style={{ fontSize: "1.3rem", fontWeight: 800, marginBottom: "16px" }}>Event Hash Chain (Concept)</h2>
-      <div style={{ display: "grid", gap: "4px", marginBottom: "28px" }}>
-        {PROOF_CHAIN_CONCEPT.map((event, idx) => (
-          <div key={idx} className="glass-panel" style={{ padding: "14px", display: "grid", gridTemplateColumns: "30px 200px 100px 1fr", gap: "12px", alignItems: "center", opacity: event.hash === "—" ? 0.5 : 1 }}>
-            <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: event.hash === "—" ? "var(--border-subtle)" : "var(--emerald)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, color: "#000" }}>
-              {idx + 1}
-            </div>
-            <span className="mono" style={{ fontWeight: 700, fontSize: "0.82rem", color: event.hash === "—" ? "var(--text-muted)" : "var(--cyan)" }}>{event.event}</span>
-            <span className="mono" style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{event.hash}</span>
-            <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{event.detail}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Verification Properties */}
-      <h2 style={{ fontSize: "1.3rem", fontWeight: 800, marginBottom: "16px" }}>Proof Properties</h2>
-      <div className="grid-2">
-        {[
-          { title: "Canonical JSON Hashing", desc: "All snapshots use deterministic key-sorted JSON before SHA-256. Same data always produces the same hash.", status: "ACTIVE" },
-          { title: "Snapshot Tamper Detection", desc: "Any modification to a snapshot field invalidates its hash. Verified in 5 unit tests.", status: "ACTIVE" },
-          { title: "Intent Hash Binding", desc: "TradeIntent hash excludes the intentHash field itself, creating a self-verifying hash chain.", status: "ACTIVE" },
-          { title: "Append-Only Event Journal", desc: "Hash-chained event log where each entry includes the previous hash. Awaiting Lane B.", status: "PENDING" },
-          { title: "Run Manifest Replay", desc: "npm run verify -- demo/run_manifest.json reproduces RECORDED vs REPRODUCED evidence. Awaiting Lane B.", status: "PENDING" },
-          { title: "Policy Hash Freeze", desc: "Policy hash computed over canonical JSON excluding policyHash field. Version-locked.", status: "ACTIVE" },
-        ].map((prop) => (
-          <div key={prop.title} className="glass-panel" style={{ padding: "18px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-              <strong>{prop.title}</strong>
-              <span className={`badge ${prop.status === "ACTIVE" ? "badge-emerald" : "badge-amber"}`}>{prop.status}</span>
-            </div>
-            <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>{prop.desc}</div>
-          </div>
-        ))}
-      </div>
-    </div>
+      <small>
+        Paper trading only. Not investment advice. Recorded market facts are hypothetical and do not
+        represent live execution.
+      </small>
+    </main>
   );
 }

@@ -128,7 +128,7 @@ export default function BreakMePage() {
           </thead>
           <tbody>
             {TEST_COVERAGE.map((file) => (
-              <tr key={file.file} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+              <tr key={file.file} style={{ borderBottom: "1px solid var(--surface-subtle)" }}>
                 <td className="mono" style={{ padding: "10px", color: "var(--cyan)", fontWeight: 600 }}>{file.file}</td>
                 <td style={{ padding: "10px", color: "var(--text-secondary)" }}>{file.module}</td>
                 <td style={{ padding: "10px", textAlign: "center" }}>
@@ -138,7 +138,7 @@ export default function BreakMePage() {
                   {file.invariants.length > 0 ? (
                     <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
                       {file.invariants.map((inv) => (
-                        <span key={inv} className="mono" style={{ fontSize: "0.72rem", color: "var(--cyan)", background: "rgba(0,240,255,0.08)", padding: "2px 6px", borderRadius: "4px" }}>{inv}</span>
+                        <span key={inv} className="mono" style={{ fontSize: "0.72rem", color: "var(--cyan)", background: "var(--accent-subtle)", padding: "2px 6px", borderRadius: "4px" }}>{inv}</span>
                       ))}
                     </div>
                   ) : (

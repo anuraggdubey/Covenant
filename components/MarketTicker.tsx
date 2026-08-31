@@ -76,7 +76,7 @@ export function MarketTicker() {
         display: "flex",
         alignItems: "center",
         padding: "6px 28px",
-        background: "rgba(10, 14, 22, 0.95)",
+        background: "var(--surface)",
         borderBottom: "1px solid var(--border-subtle)",
         fontSize: "0.76rem",
         overflowX: "auto",

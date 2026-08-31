@@ -14,30 +14,44 @@ const NAV_ROUTES = [
   { label: "Shadow Ledger", path: "/shadow-ledger" },
 ];
 
+/**
+ * The mark: a ring with a gap. A boundary that is deliberately not closed —
+ * the agent can act, but only through the opening. Cheaper than a logo and it
+ * actually means something.
+ */
+function Mark() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+      <circle
+        cx="9"
+        cy="9"
+        r="7"
+        fill="none"
+        stroke="var(--accent)"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeDasharray="33 11"
+        transform="rotate(-45 9 9)"
+      />
+    </svg>
+  );
+}
+
 export function Navigation() {
   const pathname = usePathname();
 
   return (
     <nav className="top-nav">
-      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div
-            style={{
-              width: "12px",
-              height: "12px",
-              borderRadius: "50%",
-              background: "var(--cyan)",
-              boxShadow: "0 0 10px var(--cyan)",
-            }}
-          />
-          <span style={{ fontWeight: 900, fontSize: "1.15rem", letterSpacing: "0.02em" }}>
-            COVENANT
-          </span>
-        </Link>
-        <span className="badge badge-cyan" style={{ fontSize: "0.68rem" }}>
-          PAPER-ONLY BUILD
+      <Link
+        href="/"
+        style={{ display: "flex", alignItems: "center", gap: 8, flex: "none" }}
+        aria-label="Covenant home"
+      >
+        <Mark />
+        <span style={{ fontWeight: 650, fontSize: "0.9375rem", letterSpacing: "-0.01em" }}>
+          Covenant
         </span>
-      </div>
+      </Link>
 
       <div className="nav-links">
         {NAV_ROUTES.map((route) => {
@@ -47,6 +61,7 @@ export function Navigation() {
               key={route.path}
               href={route.path}
               className={`nav-item ${isActive ? "active" : ""}`}
+              aria-current={isActive ? "page" : undefined}
             >
               {route.label}
             </Link>
@@ -54,9 +69,10 @@ export function Navigation() {
         })}
       </div>
 
-      <span className="badge badge-amber" style={{ fontSize: "0.68rem" }}>
-        ACCOUNT UNVERIFIED
-      </span>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flex: "none" }}>
+        <span className="badge badge-cyan">Paper only</span>
+        <span className="badge badge-amber">Account unverified</span>
+      </div>
     </nav>
   );
 }

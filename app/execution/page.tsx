@@ -124,7 +124,7 @@ export default function ExecutionPage() {
                     <span className="mono" style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>Equity: ${tick.account.equity}</span>
                   </div>
                   {tick.underlyings.map((u) => (
-                    <div key={u.symbol} style={{ padding: "10px", background: "rgba(0,0,0,0.3)", borderRadius: "6px", marginBottom: "6px" }}>
+                    <div key={u.symbol} style={{ padding: "10px", background: "var(--surface-sunken)", borderRadius: "6px", marginBottom: "6px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span className="mono" style={{ fontWeight: 800 }}>{u.symbol}</span>
                         {"intent" in u.proposal && u.proposal.intent ? (
@@ -218,15 +218,15 @@ export default function ExecutionPage() {
             <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "16px" }}>
               <h3 style={{ fontWeight: 800, marginBottom: "12px" }}>Credential Isolation Boundaries</h3>
               <div style={{ display: "grid", gap: "8px", fontSize: "0.84rem" }}>
-                <div style={{ padding: "10px", background: "rgba(0,0,0,0.3)", borderRadius: "6px" }}>
+                <div style={{ padding: "10px", background: "var(--surface-sunken)", borderRadius: "6px" }}>
                   <span style={{ color: "var(--emerald)", fontWeight: 700 }}>Alpha Engine</span>
                   <span style={{ color: "var(--text-secondary)" }}> — Zero broker credentials. Cannot submit orders, sign permits, or read API keys.</span>
                 </div>
-                <div style={{ padding: "10px", background: "rgba(0,0,0,0.3)", borderRadius: "6px" }}>
+                <div style={{ padding: "10px", background: "var(--surface-sunken)", borderRadius: "6px" }}>
                   <span style={{ color: "var(--cyan)", fontWeight: 700 }}>Safety Kernel</span>
                   <span style={{ color: "var(--text-secondary)" }}> — Holds signing private key. Re-fetches state independently (never trusts caller).</span>
                 </div>
-                <div style={{ padding: "10px", background: "rgba(0,0,0,0.3)", borderRadius: "6px" }}>
+                <div style={{ padding: "10px", background: "var(--surface-sunken)", borderRadius: "6px" }}>
                   <span style={{ color: "var(--amber)", fontWeight: 700 }}>Executor</span>
                   <span style={{ color: "var(--text-secondary)" }}> — Sole module with Alpaca write access. Verifies signature + intent hash before submission.</span>
                 </div>

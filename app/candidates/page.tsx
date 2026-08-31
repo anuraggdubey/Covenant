@@ -173,7 +173,7 @@ export default function CandidateLabPage() {
             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
               {data?.dataMode === "SYNTHETIC_MOCK" ? "Synthetic Underlying Price" : "Latest Alpaca Paper Price"}
             </div>
-            <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#fff" }}>
+            <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text)" }}>
               ${activeUnderlyingData.underlyingPrice}
             </div>
           </div>
@@ -248,7 +248,7 @@ export default function CandidateLabPage() {
                       </h3>
 
                       {/* Legs Breakdown */}
-                      <div style={{ background: "rgba(0,0,0,0.4)", borderRadius: "8px", padding: "14px" }}>
+                      <div style={{ background: "var(--surface-sunken)", borderRadius: "8px", padding: "14px" }}>
                         <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "8px", fontWeight: 700 }}>
                           Exact OCC Contract Legs
                         </div>
@@ -258,7 +258,7 @@ export default function CandidateLabPage() {
                               <span className="mono" style={{ color: leg.side === "buy" ? "var(--emerald)" : "var(--rose)", fontWeight: 800 }}>
                                 {leg.positionIntent.toUpperCase()} {leg.ratioQty}x
                               </span>
-                              <span className="mono" style={{ color: "#fff" }}>
+                              <span className="mono" style={{ color: "var(--text)" }}>
                                 {leg.symbol}
                               </span>
                             </div>
@@ -283,7 +283,7 @@ export default function CandidateLabPage() {
                   <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "14px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px", fontSize: "0.84rem" }}>
                     <div>
                       <span style={{ color: "var(--text-muted)" }}>Sized Quantity:</span>
-                      <div className="mono" style={{ fontWeight: 800, color: "#fff" }}>{cand.quantity} contracts</div>
+                      <div className="mono" style={{ fontWeight: 800, color: "var(--text)" }}>{cand.quantity} contracts</div>
                     </div>
                     <div>
                       <span style={{ color: "var(--text-muted)" }}>Limit Price / Share:</span>
@@ -358,9 +358,9 @@ export default function CandidateLabPage() {
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem", textAlign: "center" }}>
               <thead>
-                <tr style={{ background: "rgba(0,0,0,0.5)", color: "var(--text-muted)", fontSize: "0.74rem", textTransform: "uppercase" }}>
+                <tr style={{ background: "var(--surface-sunken)", color: "var(--text-muted)", fontSize: "0.74rem", textTransform: "uppercase" }}>
                   <th colSpan={4} style={{ padding: "8px", color: "var(--cyan)" }}>CALLS (BULLISH)</th>
-                  <th style={{ padding: "8px", background: "rgba(255,255,255,0.06)", color: "#fff" }}>STRIKE</th>
+                  <th style={{ padding: "8px", background: "var(--surface-subtle)", color: "var(--text)" }}>STRIKE</th>
                   <th colSpan={4} style={{ padding: "8px", color: "var(--rose)" }}>PUTS (BEARISH)</th>
                 </tr>
                 <tr style={{ borderBottom: "1px solid var(--border-subtle)", color: "var(--text-muted)", fontSize: "0.72rem" }}>
@@ -368,7 +368,7 @@ export default function CandidateLabPage() {
                   <th style={{ padding: "6px" }}>IV</th>
                   <th style={{ padding: "6px" }}>Bid</th>
                   <th style={{ padding: "6px" }}>Ask</th>
-                  <th style={{ padding: "6px", background: "rgba(255,255,255,0.06)" }}>$ Strike</th>
+                  <th style={{ padding: "6px", background: "var(--surface-subtle)" }}>$ Strike</th>
                   <th style={{ padding: "6px" }}>Bid</th>
                   <th style={{ padding: "6px" }}>Ask</th>
                   <th style={{ padding: "6px" }}>IV</th>
@@ -381,7 +381,7 @@ export default function CandidateLabPage() {
                     const c = row.call;
                     const p = row.put;
                     return (
-                      <tr key={rIdx} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      <tr key={rIdx} style={{ borderBottom: "1px solid var(--surface-subtle)" }}>
                         <td className="mono" style={{ padding: "8px", color: "var(--text-secondary)" }}>
                           {c?.delta !== undefined ? c.delta.toFixed(2) : "—"}
                         </td>
@@ -394,7 +394,7 @@ export default function CandidateLabPage() {
                         <td className="mono" style={{ padding: "8px" }}>
                           {c?.ask ? `$${c.ask}` : "—"}
                         </td>
-                        <td className="mono" style={{ padding: "8px", fontWeight: 800, background: "rgba(255,255,255,0.06)", color: "var(--cyan)" }}>
+                        <td className="mono" style={{ padding: "8px", fontWeight: 800, background: "var(--surface-subtle)", color: "var(--cyan)" }}>
                           ${row.strike}
                         </td>
                         <td className="mono" style={{ padding: "8px", color: "var(--emerald)", fontWeight: 700 }}>

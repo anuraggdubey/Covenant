@@ -91,7 +91,7 @@ export default function ShadowLedgerPage() {
           </thead>
           <tbody>
             {ATTRIBUTION_RULES.map((r) => (
-              <tr key={r.rule} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+              <tr key={r.rule} style={{ borderBottom: "1px solid var(--surface-subtle)" }}>
                 <td className="mono" style={{ padding: "10px", color: "var(--cyan)", fontWeight: 700 }}>{r.rule}</td>
                 <td style={{ padding: "10px", color: "var(--text-secondary)" }}>{r.saved}</td>
                 <td style={{ padding: "10px" }}>
@@ -118,7 +118,7 @@ export default function ShadowLedgerPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "16px" }}>
             <div>
               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Period</div>
-              <div className="mono" style={{ fontWeight: 700, color: "#fff" }}>{validation.period}</div>
+              <div className="mono" style={{ fontWeight: 700, color: "var(--text)" }}>{validation.period}</div>
             </div>
             <div>
               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Underlyings</div>
@@ -131,7 +131,7 @@ export default function ShadowLedgerPage() {
           </div>
           <div style={{ display: "grid", gap: "8px" }}>
             {validation.results.map((r) => (
-              <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontSize: "0.84rem" }}>
+              <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--surface-subtle)", fontSize: "0.84rem" }}>
                 <span style={{ color: "var(--text-secondary)" }}>{r.label}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <span className="mono" style={{ fontWeight: 700 }}>{r.value}</span>

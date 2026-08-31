@@ -76,11 +76,11 @@ export default function MandateStudioPage() {
               rows={6}
               style={{
                 width: "100%",
-                background: "rgba(0,0,0,0.5)",
+                background: "var(--surface-sunken)",
                 border: "1px solid var(--border-subtle)",
                 borderRadius: "8px",
                 padding: "14px",
-                color: "#fff",
+                color: "var(--text)",
                 fontSize: "0.95rem",
                 fontFamily: "inherit",
                 lineHeight: 1.5,
@@ -166,7 +166,7 @@ export default function MandateStudioPage() {
           {selectedMandate ? (
             <>
               {selectedMandate.expectedContradictions.length > 0 && (
-                <div style={{ padding: "12px", background: "rgba(244,63,94,0.1)", border: "1px solid var(--rose)", borderRadius: "8px", marginBottom: "16px" }}>
+                <div style={{ padding: "12px", background: "var(--danger-subtle)", border: "1px solid var(--rose)", borderRadius: "8px", marginBottom: "16px" }}>
                   <div style={{ fontWeight: 700, color: "var(--rose)", marginBottom: "6px", fontSize: "0.85rem" }}>Contradictions Detected</div>
                   {selectedMandate.expectedContradictions.map((c) => (
                     <div key={c} style={{ fontSize: "0.8rem", color: "var(--rose)", padding: "2px 0" }}>✗ {c}</div>
@@ -194,7 +194,7 @@ export default function MandateStudioPage() {
               {selectedMandate.expectedCompiledPolicy.riskOverrides && Object.keys(selectedMandate.expectedCompiledPolicy.riskOverrides).length > 0 && (
                 <div style={{ marginTop: "16px" }}>
                   <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "6px", fontWeight: 700 }}>Risk Overrides</div>
-                  <pre className="mono" style={{ fontSize: "0.72rem", color: "var(--amber)", background: "rgba(0,0,0,0.4)", padding: "10px", borderRadius: "6px", whiteSpace: "pre-wrap" }}>
+                  <pre className="mono" style={{ fontSize: "0.72rem", color: "var(--amber)", background: "var(--surface-sunken)", padding: "10px", borderRadius: "6px", whiteSpace: "pre-wrap" }}>
                     {JSON.stringify(selectedMandate.expectedCompiledPolicy.riskOverrides, null, 2)}
                   </pre>
                 </div>

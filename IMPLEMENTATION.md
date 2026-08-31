@@ -354,11 +354,11 @@ Format: `ID · owner · depends-on · exit test`. Claim a task by putting your i
 - `T-B3` · T-02 · ✅ **DONE (DA, 30 Aug)** — `lib/permits/{sign,verify,nonce}.ts`. Private key read in `sign.ts` only; executor holds the public half. Nonce is consumed after validation and immediately before the network call, so a rejected permit never burns its nonce.
 - `T-B4` · T-B3 · 🟡 **PARTIAL (DA, 30 Aug)** — `lib/execution/executor.ts` written and all fourteen checks tested; the four judge attacks each reject with **zero transport calls** (`tests/execution/executor.attacks.test.ts`). **Still open: no real Alpaca paper order has been submitted** — blocked on `T-00` credentials and Level 3 approval. The second half of Day 4's exit test is not met until that order ID exists.
 - `T-B5` · T-B4 · ✅ **DONE (DA, 31 Aug)** — `lib/audit/journal.ts`, append-only, each event committing to the previous hash. Tamper tests cover edit, delete, reorder.
-- `T-B6` · T-B5 · Kill switch: halt entries, optionally cancel open orders, fail closed on error.
-- `T-B7` · T-C1 · Mandate compiler and contradiction checks. The model drafts; schema validation and explicit activation make it live.
-- `T-B8` · T-B7 · Break Me: generators over orders, quotes, positions, P&L states, session transitions, and stale data; fixed seed first, then randomised; minimised counterexamples; fail-closed activation.
+- `T-B6` · T-B5 · ✅ **DONE (DA, 31 Aug)** — `lib/safety/kill-switch.ts`. Confirmation phrase required; the halt is applied BEFORE anything that can fail, so a broker outage during cancellation still leaves entries stopped.
+- `T-B7` · T-C1 · ✅ **DONE (DA, 31 Aug)** — `lib/mandates/compile.ts`. All 12 of Lane C's corpus mandates compile to the expected status and contradiction codes; the 4 contradictory ones cannot be materialised into an activatable policy.
+- `T-B8` · T-B7 · ✅ **DONE (DA, 31 Aug)** — `lib/break-me/`. 16 attack families, fixed seed then randomised, ~318 generated states per run. `mayActivate` refuses a policy if any invariant never fired — an untested rule is not a claim we make.
 - `T-B9` · T-B5 · ✅ **DONE (DA, 31 Aug)** — `npm run verify -- demo/run_manifest.json`, 24 checks, no credentials and no network. Plus `npm run audit`: capability boundary, paper-only, invariant coverage, replay, secret hygiene — 18/18.
-- `T-B10` · T-B5 · Shadow Ledger: synchronised marks on the same schedule for approved, shrunk, vetoed, and abstained candidates; rule-level attribution; no backfill.
+- `T-B10` · T-B5 · ✅ **DONE (DA, 31 Aug)** — `lib/shadow-ledger/`. Backfilled marks are refused at construction, and the report keeps its counterfactual caveat attached to the numbers.
 
 **Lane C — Trading advisor**
 

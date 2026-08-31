@@ -21,7 +21,10 @@ import { execSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 
+import corpus from "@/docs/mandates/corpus-v1.json";
 import { verifyManifest } from "@/lib/audit/verify";
+import { mayActivate, runBreakMe } from "@/lib/break-me";
+import { compileMandate } from "@/lib/mandates/compile";
 import { INVARIANT_REGISTRY } from "@/lib/safety/invariants";
 import { ALL_INVARIANTS, type RunManifest } from "@/types/domain";
 
@@ -189,7 +192,105 @@ function auditReplay(): void {
   );
 }
 
-// --- 5. Secret hygiene ------------------------------------------------------
+// --- 5. Mandate compiler against Lane C's corpus ----------------------------
+
+interface CorpusCase {
+  id: string;
+  mandateText: string;
+  expectedCompiledPolicy: { status: string };
+  expectedContradictions: { code: string }[];
+}
+
+function auditMandates(): void {
+  const cases = (corpus as unknown as { cases: CorpusCase[] }).cases;
+  const wrong: string[] = [];
+
+  for (const testCase of cases) {
+    const result = compileMandate(testCase.mandateText);
+    const statusOk = result.draft.status === testCase.expectedCompiledPolicy.status;
+    const codesOk =
+      JSON.stringify(result.contradictions.map((c) => c.code).sort()) ===
+      JSON.stringify(testCase.expectedContradictions.map((c) => c.code).sort());
+    if (!statusOk || !codesOk) wrong.push(testCase.id);
+  }
+
+  record(
+    "mandates",
+    wrong.length === 0,
+    wrong.length === 0
+      ? `All ${cases.length} corpus mandates compile to the expected status and contradictions.`
+      : `Mismatched: ${wrong.join(", ")}`
+  );
+
+  const blocked = cases.filter((c) => c.expectedContradictions.length > 0);
+  record(
+    "mandates",
+    blocked.length >= 4,
+    `${blocked.length} mandates are expected to be BLOCKED and every one of them is.`
+  );
+}
+
+// --- 6. Break Me coverage ---------------------------------------------------
+
+function auditBreakMe(): void {
+  // The audit cannot import test fixtures, so it exercises the engine against
+  // the world recorded in the demo manifest — the same states judges replay.
+  const path = resolve(process.cwd(), "demo/run_manifest.json");
+  if (!existsSync(path)) {
+    record("break-me", false, "No manifest to source a world from.");
+    return;
+  }
+  const manifest = JSON.parse(readFileSync(path, "utf8")) as RunManifest;
+  const signed = manifest.events.find((e) => e.eventType === "PERMIT_SIGNED");
+  const payload = signed?.payload as
+    | {
+        policy: Parameters<typeof runBreakMe>[0] extends () => infer W
+          ? W extends { policy: infer P }
+            ? P
+            : never
+          : never;
+      }
+    | undefined;
+
+  if (payload === undefined) {
+    record("break-me", false, "Manifest carries no decision to build a world from.");
+    return;
+  }
+
+  const world = signed!.payload as Record<string, unknown>;
+  const report = runBreakMe(
+    () =>
+      ({
+        policy: world.policy,
+        intent: world.intent,
+        account: world.account,
+        market: world.market,
+        session: world.session,
+        now: new Date(world.now as string)
+      }) as ReturnType<Parameters<typeof runBreakMe>[0]>,
+    (world.policy as { policyHash: string }).policyHash,
+    { runs: 250 }
+  );
+
+  const gate = mayActivate(report);
+  record(
+    "break-me",
+    report.passed,
+    report.passed
+      ? `${report.cases} generated hostile states, no counterexample.`
+      : `Counterexample: ${report.counterexamples[0]?.description ?? "unknown"}`
+  );
+  record(
+    "break-me",
+    report.fullyCovered,
+    report.fullyCovered
+      ? "Every invariant fired at least once — none is merely asserted."
+      : `Never exercised: ${report.coverage.filter((r) => !r.covered).map((r) => r.invariant).join(", ")}`
+  );
+  record("break-me", gate.ok, gate.reason);
+}
+
+// --- 7. Secret hygiene ------------------------------------------------------
 
 function auditSecrets(): void {
   let tracked: string[] = [];
@@ -231,6 +332,8 @@ function main(): void {
   auditPaperOnly();
   auditInvariants();
   auditReplay();
+  auditMandates();
+  auditBreakMe();
   auditSecrets();
 
   process.stdout.write(`\n${BOLD}Covenant audit${RESET}\n\n`);

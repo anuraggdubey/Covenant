@@ -4,7 +4,13 @@ import { getServerEnv } from "@/lib/env/server";
 
 export const dynamic = "force-dynamic";
 
+/** POST handler for manual/programmatic tick invocations. */
 export async function POST(request: Request) {
+  return handleTick(request);
+}
+
+/** GET handler for Vercel Cron (which sends GET requests). */
+export async function GET(request: Request) {
   return handleTick(request);
 }
 

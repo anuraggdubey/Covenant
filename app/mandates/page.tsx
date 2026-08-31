@@ -1,48 +1,75 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const SAMPLE_MANDATES = [
-  {
-    name: "Defined Risk SPY/QQQ Debit & Credit Spreads (Standard Active)",
-    text: "Trade defined-risk SPY and QQQ vertical spreads. Maximum risk per trade is 2% of equity. Total portfolio heat must not exceed 6%. Filter contracts with 7 to 45 DTE and deltas between 0.20 and 0.80. If any quote is missing or older than 60 seconds, abstain immediately.",
-  },
-  {
-    name: "Conservative Index Income",
-    text: "Only trade single-side credit vertical spreads on SPY. 14 to 30 DTE, delta under 0.30. Per-trade risk cap 1.5%. Daily loss limit -2%. Fail closed on stale data.",
-  },
-  {
-    name: "Contradictory Mandate (Caught by Compiler)",
-    text: "Trade at least once daily on SPY regardless of quotes or market closures. Never lose money and always guarantee 100% win rate.",
-  },
-];
+interface MandateCase {
+  id: string;
+  title: string;
+  mandateText: string;
+  expectedCompiledPolicy: {
+    status: string;
+    riskProfile: string;
+    allowedUnderlyings: string[];
+    allowedStructures: string[];
+    missingStateAction: string;
+    modelAuthority: string;
+    invariants: string[];
+    riskOverrides?: Record<string, unknown>;
+  };
+  expectedContradictions: string[];
+}
+
+interface CorpusData {
+  schemaVersion: number;
+  profileSource: string;
+  cases: MandateCase[];
+}
 
 export default function MandateStudioPage() {
-  const [mandateText, setMandateText] = useState(SAMPLE_MANDATES[0].text);
-  const [status, setStatus] = useState<"ACTIVE" | "DRAFT" | "BLOCKED">("ACTIVE");
+  const [corpus, setCorpus] = useState<CorpusData | null>(null);
+  const [selectedMandate, setSelectedMandate] = useState<MandateCase | null>(null);
+  const [mandateText, setMandateText] = useState("");
+
+  useEffect(() => {
+    fetch("/docs/mandates/corpus-v1.json")
+      .then((r) => r.json())
+      .then((data: CorpusData) => {
+        setCorpus(data);
+        if (data.cases.length > 0) {
+          setSelectedMandate(data.cases[0]);
+          setMandateText(data.cases[0].mandateText);
+        }
+      })
+      .catch(() => {
+        // Fallback if static file isn't accessible
+        setCorpus(null);
+      });
+  }, []);
+
+  const contradictory = corpus?.cases.filter((c) => c.expectedContradictions.length > 0) ?? [];
+  const valid = corpus?.cases.filter((c) => c.expectedContradictions.length === 0) ?? [];
 
   return (
     <div className="page-container">
       <div style={{ marginBottom: "28px" }}>
         <div style={{ display: "inline-flex", gap: "8px", marginBottom: "8px" }}>
           <span className="badge badge-cyan">MANDATE STUDIO</span>
-          <span className="badge badge-emerald">VERSION 1.0 · ACTIVE</span>
+          <span className="badge badge-emerald">{corpus?.cases.length ?? 0} MANDATES IN CORPUS</span>
+          {contradictory.length > 0 && (
+            <span className="badge badge-rose">{contradictory.length} CONTRADICTORY</span>
+          )}
         </div>
-        <h1 style={{ fontSize: "2.4rem", fontWeight: 900, letterSpacing: "-0.02em" }}>
-          Mandate Studio
-        </h1>
+        <h1 style={{ fontSize: "2.4rem", fontWeight: 900, letterSpacing: "-0.02em" }}>Mandate Studio</h1>
         <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem" }}>
           Draft plain-English trading mandates. Covenant compiles them into typed, executable policy JSON with contradiction checks.
         </p>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.2fr) minmax(340px, 0.8fr)", gap: "24px" }}>
-        {/* Mandate Input */}
+        {/* Mandate Input + Corpus */}
         <div>
           <div className="glass-panel" style={{ padding: "24px", marginBottom: "24px" }}>
-            <h3 style={{ fontSize: "1.2rem", fontWeight: 800, marginBottom: "14px" }}>
-              Plain-English Mandate
-            </h3>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 800, marginBottom: "14px" }}>Plain-English Mandate</h3>
             <textarea
               value={mandateText}
               onChange={(e) => setMandateText(e.target.value)}
@@ -60,95 +87,124 @@ export default function MandateStudioPage() {
                 resize: "vertical",
               }}
             />
-
             <div style={{ display: "flex", gap: "12px", marginTop: "16px", flexWrap: "wrap" }}>
-              <button className="btn-primary" onClick={() => setStatus("ACTIVE")}>
+              <button className="btn-primary" onClick={() => {
+                const match = corpus?.cases.find((c) => c.mandateText === mandateText);
+                if (match) setSelectedMandate(match);
+              }}>
                 Compile & Echo Policy
               </button>
-              <button className="btn-secondary" onClick={() => setStatus("DRAFT")}>
-                Save as Draft
+              <button className="btn-secondary" disabled>
+                Save as Draft (Lane B)
               </button>
             </div>
           </div>
 
-          {/* Sample Mandates */}
+          {/* Valid Mandates */}
           <h3 style={{ fontSize: "1.1rem", fontWeight: 800, marginBottom: "12px" }}>
-            Sample Mandates & Contradiction Corpus
+            Valid Mandates ({valid.length})
           </h3>
-          <div style={{ display: "grid", gap: "12px" }}>
-            {SAMPLE_MANDATES.map((m, idx) => (
+          <div style={{ display: "grid", gap: "10px", marginBottom: "24px" }}>
+            {valid.map((m) => (
               <div
-                key={idx}
+                key={m.id}
                 className="glass-panel"
-                style={{ padding: "14px", cursor: "pointer", borderLeft: idx === 2 ? "3px solid var(--rose)" : "3px solid var(--cyan)" }}
-                onClick={() => setMandateText(m.text)}
+                style={{ padding: "14px", cursor: "pointer", borderLeft: "3px solid var(--cyan)", opacity: selectedMandate?.id === m.id ? 1 : 0.75 }}
+                onClick={() => { setSelectedMandate(m); setMandateText(m.mandateText); }}
               >
-                <div style={{ fontWeight: 700, fontSize: "0.9rem", color: idx === 2 ? "var(--rose)" : "var(--cyan)", marginBottom: "4px" }}>
-                  {m.name}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                  <span className="mono" style={{ fontWeight: 800, color: "var(--cyan)", fontSize: "0.78rem" }}>{m.id}</span>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>{m.title}</span>
                 </div>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                  {m.text}
-                </div>
+                <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>{m.mandateText}</div>
               </div>
             ))}
           </div>
+
+          {/* Contradictory Mandates */}
+          {contradictory.length > 0 && (
+            <>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 800, marginBottom: "12px", color: "var(--rose)" }}>
+                Contradictory Mandates ({contradictory.length})
+              </h3>
+              <div style={{ display: "grid", gap: "10px" }}>
+                {contradictory.map((m) => (
+                  <div
+                    key={m.id}
+                    className="glass-panel"
+                    style={{ padding: "14px", cursor: "pointer", borderLeft: "3px solid var(--rose)", opacity: selectedMandate?.id === m.id ? 1 : 0.75 }}
+                    onClick={() => { setSelectedMandate(m); setMandateText(m.mandateText); }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                      <span className="mono" style={{ fontWeight: 800, color: "var(--rose)", fontSize: "0.78rem" }}>{m.id}</span>
+                      <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>{m.title}</span>
+                    </div>
+                    <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>{m.mandateText}</div>
+                    <div style={{ display: "flex", gap: "4px", marginTop: "6px", flexWrap: "wrap" }}>
+                      {m.expectedContradictions.map((c) => (
+                        <span key={c} className="badge badge-rose" style={{ fontSize: "0.64rem" }}>{c}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Compiled Typed Policy Echo */}
-        <div className="glass-panel" style={{ padding: "24px" }}>
+        {/* Compiled Policy Echo */}
+        <div className="glass-panel" style={{ padding: "24px", alignSelf: "start", position: "sticky", top: "80px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
             <h3 style={{ fontSize: "1.2rem", fontWeight: 800 }}>Compiled Policy Echo</h3>
-            <span className={`badge ${status === "ACTIVE" ? "badge-emerald" : "badge-amber"}`}>
-              {status}
-            </span>
+            {selectedMandate && (
+              <span className={`badge ${selectedMandate.expectedContradictions.length > 0 ? "badge-rose" : "badge-emerald"}`}>
+                {selectedMandate.expectedContradictions.length > 0 ? "BLOCKED" : selectedMandate.expectedCompiledPolicy.status}
+              </span>
+            )}
           </div>
 
-          <div style={{ display: "grid", gap: "10px", fontSize: "0.84rem", marginBottom: "20px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "var(--text-muted)" }}>Policy ID:</span>
-              <span className="mono">pol_covenant_active_v1</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "var(--text-muted)" }}>Policy Hash:</span>
-              <span className="mono" style={{ color: "var(--cyan)" }}>8f7a9d3e5b1c...9c0d</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "var(--text-muted)" }}>Allowed Underlyings:</span>
-              <span className="mono">["SPY", "QQQ"]</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "var(--text-muted)" }}>Per-Trade Max Loss:</span>
-              <span className="mono" style={{ color: "var(--amber)" }}>2.0% of equity</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "var(--text-muted)" }}>Portfolio Heat Limit:</span>
-              <span className="mono" style={{ color: "var(--cyan)" }}>6.0% of equity</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "var(--text-muted)" }}>DTE Range:</span>
-              <span className="mono">7 – 45 days</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "var(--text-muted)" }}>Delta Range:</span>
-              <span className="mono">0.20 – 0.80</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "var(--text-muted)" }}>Missing State Action:</span>
-              <span className="badge badge-rose" style={{ padding: "2px 6px", fontSize: "0.65rem" }}>ABSTAIN (LOCKED)</span>
-            </div>
-          </div>
+          {selectedMandate ? (
+            <>
+              {selectedMandate.expectedContradictions.length > 0 && (
+                <div style={{ padding: "12px", background: "rgba(244,63,94,0.1)", border: "1px solid var(--rose)", borderRadius: "8px", marginBottom: "16px" }}>
+                  <div style={{ fontWeight: 700, color: "var(--rose)", marginBottom: "6px", fontSize: "0.85rem" }}>Contradictions Detected</div>
+                  {selectedMandate.expectedContradictions.map((c) => (
+                    <div key={c} style={{ fontSize: "0.8rem", color: "var(--rose)", padding: "2px 0" }}>✗ {c}</div>
+                  ))}
+                </div>
+              )}
 
-          <div style={{ background: "rgba(0,0,0,0.5)", borderRadius: "8px", padding: "14px" }}>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "8px", fontWeight: 700 }}>
-              Contradiction & Safety Audit
+              <div style={{ display: "grid", gap: "10px", fontSize: "0.84rem" }}>
+                {[
+                  { label: "Mandate ID", value: selectedMandate.id },
+                  { label: "Risk Profile", value: selectedMandate.expectedCompiledPolicy.riskProfile },
+                  { label: "Underlyings", value: selectedMandate.expectedCompiledPolicy.allowedUnderlyings.join(", ") },
+                  { label: "Structures", value: selectedMandate.expectedCompiledPolicy.allowedStructures.join(", ") },
+                  { label: "Missing State", value: selectedMandate.expectedCompiledPolicy.missingStateAction },
+                  { label: "Model Authority", value: selectedMandate.expectedCompiledPolicy.modelAuthority },
+                  { label: "Invariants", value: `${selectedMandate.expectedCompiledPolicy.invariants.length} bound` },
+                ].map(({ label, value }) => (
+                  <div key={label} style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "var(--text-muted)" }}>{label}:</span>
+                    <span className="mono" style={{ color: "var(--cyan)", fontWeight: 600 }}>{value}</span>
+                  </div>
+                ))}
+              </div>
+
+              {selectedMandate.expectedCompiledPolicy.riskOverrides && Object.keys(selectedMandate.expectedCompiledPolicy.riskOverrides).length > 0 && (
+                <div style={{ marginTop: "16px" }}>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "6px", fontWeight: 700 }}>Risk Overrides</div>
+                  <pre className="mono" style={{ fontSize: "0.72rem", color: "var(--amber)", background: "rgba(0,0,0,0.4)", padding: "10px", borderRadius: "6px", whiteSpace: "pre-wrap" }}>
+                    {JSON.stringify(selectedMandate.expectedCompiledPolicy.riskOverrides, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{ color: "var(--text-muted)", textAlign: "center", padding: "20px" }}>
+              Select a mandate to see its compiled policy echo.
             </div>
-            <div style={{ color: "var(--emerald)", fontSize: "0.82rem", display: "flex", alignItems: "center", gap: "6px" }}>
-              ✓ No contradictory guarantees detected
-            </div>
-            <div style={{ color: "var(--emerald)", fontSize: "0.82rem", display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
-              ✓ All 8 executable invariants bound
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

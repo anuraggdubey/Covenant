@@ -3,6 +3,7 @@ import { AlpacaReadClient } from "@/lib/alpaca/client";
 import { buildAccountSnapshot, buildMarketSnapshot } from "./snapshots";
 import { propose } from "./engine";
 import { sha256Canonical } from "./canonical";
+import { monitorPositions, type PositionMonitorResult } from "@/lib/monitor/position-monitor";
 
 export interface TickResult {
   timestamp: string;
@@ -25,6 +26,21 @@ export interface TickResult {
     marketSnapshotHash?: string;
     proposal: { intent: TradeIntent } | { abstain: true; reason: string };
   }>;
+  positionMonitor?: PositionMonitorResult;
+}
+
+/** In-memory tick history for the dashboard (resets on server restart). */
+const tickHistory: TickResult[] = [];
+const MAX_TICK_HISTORY = 100;
+
+/** Get recent tick history for the execution dashboard. */
+export function getTickHistory(): readonly TickResult[] {
+  return tickHistory;
+}
+
+/** Clear tick history (useful for tests). */
+export function clearTickHistory(): void {
+  tickHistory.length = 0;
 }
 
 const defaultPolicyFields: Omit<Policy, "policyHash"> = {
@@ -89,7 +105,7 @@ export async function executeTick(
         },
       });
     }
-    return {
+    const result: TickResult = {
       timestamp: new Date().toISOString(),
       dataMode: readClient.isMockMode() ? "SYNTHETIC_MOCK" : "PAPER",
       clock: { isOpen: false, timestamp: clock.timestamp, nextOpen: clock.next_open, nextClose: clock.next_close },
@@ -102,6 +118,8 @@ export async function executeTick(
       },
       underlyings: underlyingsResult,
     };
+    recordTickResult(result);
+    return result;
   }
 
   // 3. Process each allowed underlying
@@ -155,7 +173,15 @@ export async function executeTick(
     }
   }
 
-  return {
+  // 4. Monitor existing positions for exit conditions
+  let positionMonitor: PositionMonitorResult | undefined;
+  try {
+    positionMonitor = await monitorPositions(readClient, policy);
+  } catch {
+    // Fail open for position monitoring — it's not a trade gate
+  }
+
+  const result: TickResult = {
     timestamp: new Date().toISOString(),
     dataMode: readClient.isMockMode() ? "SYNTHETIC_MOCK" : "PAPER",
     clock: {
@@ -172,5 +198,17 @@ export async function executeTick(
       snapshotHash: accountSnapshot.snapshotHash,
     },
     underlyings: underlyingsResult,
+    positionMonitor,
   };
+
+  recordTickResult(result);
+  return result;
+}
+
+/** Store a tick result in history (capped at MAX_TICK_HISTORY entries). */
+function recordTickResult(result: TickResult): void {
+  tickHistory.push(result);
+  if (tickHistory.length > MAX_TICK_HISTORY) {
+    tickHistory.splice(0, tickHistory.length - MAX_TICK_HISTORY);
+  }
 }

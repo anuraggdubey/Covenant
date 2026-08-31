@@ -267,6 +267,26 @@ export class AlpacaReadClient {
     return this.fetchJson(url, `getStockBars(${symbol})`, alpacaBarsSchema);
   }
 
+  async getPositions(): Promise<import("@/lib/monitor/position-monitor").AlpacaPositionResponse[]> {
+    if (this.mockMode) {
+      return [];
+    }
+    const url = new URL("/v2/positions", this.tradingBaseUrl);
+    const response = await fetch(url, {
+      method: "GET",
+      headers: this.getHeaders(),
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      throw new Error(`[FAIL-CLOSED] getPositions returned HTTP ${response.status}.`);
+    }
+    const data = await response.json();
+    if (!Array.isArray(data)) {
+      throw new Error("[FAIL-CLOSED] getPositions returned a non-array response.");
+    }
+    return data;
+  }
+
   private buildMockOptionSnapshots(underlying: "SPY" | "QQQ"): AlpacaOptionSnapshotsResponse {
     const timestamp = new Date().toISOString();
     const basePrice = underlying === "SPY" ? 500 : 450;

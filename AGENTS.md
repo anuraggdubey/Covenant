@@ -19,3 +19,13 @@ The short version, so a cold start cannot go wrong:
 - **Paper trading only.** No live endpoint, ever.
 - **Stay in your lane.** Check the file ownership map in `IMPLEMENTATION.md` §5 before editing. Work one task ID per branch, named `lane-<a|b|c>/<task-id>-<slug>`.
 - **Before claiming done,** run `npm run typecheck`, `npm run build`, `npm run test`, and `npm run verify -- demo/run_manifest.json`, and paste the real output.
+
+## Design
+
+Read `DESIGN.md` before touching anything under `app/`, `components/`, or `app/globals.css`. It is a [DESIGN.md-format](https://github.com/google-labs-code/design.md) file: YAML tokens plus the reasoning behind them.
+
+- **Every colour token in it is live in `app/globals.css`,** and `tests/design/design-tokens.test.ts` fails if the two drift. Change both, or neither.
+- Use a token. Never a raw hex or `rgba()` in a component.
+- Hashes, permit ids, nonces and OCC symbols are always `.mono`.
+- **No background audio, music, or autoplaying video.** See the Do's and Don'ts section for why — this is a deliberate decision, not an omission.
+- No new component library, and no Tailwind. `DESIGN.md` explains why Ledger's Lumen was borrowed from rather than installed.

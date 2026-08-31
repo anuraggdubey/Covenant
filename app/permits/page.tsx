@@ -1,3 +1,5 @@
+import { AuthorityBoundary } from "@/components/AuthorityBoundary";
+
 export const metadata = {
   title: "Permit Console — Covenant"
 };
@@ -148,6 +150,10 @@ export default function PermitsPage() {
           that keeps it honest.
         </p>
       </header>
+
+      <section className="glass-panel-glow">
+        <AuthorityBoundary />
+      </section>
 
       <section>
         <h2 style={{ marginBottom: 12 }}>Permit lifecycle</h2>

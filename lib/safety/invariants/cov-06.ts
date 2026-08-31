@@ -10,6 +10,7 @@
  */
 
 import { hashObject } from "@/lib/canonical";
+import { openPositionsOf } from "@/lib/safety/state";
 import { fail, pass, type InvariantEvaluator } from "@/lib/safety/types";
 
 export const covenant06: InvariantEvaluator = {
@@ -17,12 +18,21 @@ export const covenant06: InvariantEvaluator = {
   title: "No duplicate or equivalent exposure inside the cooldown window",
   enforcedAt: "kernel",
   evaluate({ policy, intent, account, now }) {
+    const positions = openPositionsOf(account);
+    if (positions === null) {
+      return fail(
+        "COV-06",
+        "ABSTAIN",
+        "Account snapshot carries no open-position list, so duplicate exposure cannot be ruled out."
+      );
+    }
+
     const incomingLegs = hashObject(
       [...intent.legs].map((l) => `${l.symbol}:${l.side}:${l.ratioQty}`).sort()
     );
     const cooldownMs = policy.duplicateExposureCooldownMinutes * 60_000;
 
-    for (const position of account.openPositions) {
+    for (const position of positions) {
       const positionLegs = hashObject(
         [...position.legs].map((l) => `${l.symbol}:${l.side}:${l.ratioQty}`).sort()
       );

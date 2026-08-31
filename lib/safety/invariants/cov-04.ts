@@ -2,13 +2,15 @@
  * COV-04 — No entry after a daily halt until a verified new session.
  *
  * The enforcement lives in the state machine (lib/safety/session.ts); this
- * evaluator is the pre-trade gate that reads it. Note the third branch: if
- * the session state we were handed belongs to a different trading date than
- * the clock we just read, we do not silently reset — we abstain and make the
- * caller reconcile. Fail closed beats a convenient assumption.
+ * evaluator is the pre-trade gate that reads it. Note the branches that
+ * abstain rather than reset: if the session state we hold belongs to a
+ * different trading date than the clock we just read, we make the caller
+ * reconcile instead of silently deciding a new session began. Fail closed
+ * beats a convenient assumption.
  */
 
 import { breachesDailyLimit } from "@/lib/safety/session";
+import { clockOf, dayPnlPctOf } from "@/lib/safety/state";
 import { fail, pass, type InvariantEvaluator } from "@/lib/safety/types";
 
 export const covenant04: InvariantEvaluator = {
@@ -16,12 +18,21 @@ export const covenant04: InvariantEvaluator = {
   title: "No entry after daily halt until a verified new session",
   enforcedAt: "kernel",
   evaluate({ policy, account, market, session }) {
-    if (session.sessionDate !== market.clock.sessionDate) {
+    const clock = clockOf(market);
+    if (clock === null) {
+      return fail(
+        "COV-04",
+        "ABSTAIN",
+        "Market snapshot carries no broker clock, so the trading session cannot be verified."
+      );
+    }
+
+    if (session.sessionDate !== clock.sessionDate) {
       return fail(
         "COV-04",
         "ABSTAIN",
         `Session state is recorded against ${session.sessionDate} but the broker clock reads ` +
-          `${market.clock.sessionDate}. Reconcile before trading.`
+          `${clock.sessionDate}. Reconcile before trading.`
       );
     }
 
@@ -33,11 +44,20 @@ export const covenant04: InvariantEvaluator = {
       );
     }
 
-    if (breachesDailyLimit(account, policy.dailyHaltPct)) {
+    const breached = breachesDailyLimit(account, policy.dailyHaltPct);
+    if (breached === null) {
+      return fail(
+        "COV-04",
+        "ABSTAIN",
+        "Account snapshot carries no day P&L, so the daily halt cannot be evaluated."
+      );
+    }
+    if (breached) {
+      const pct = dayPnlPctOf(account) ?? 0;
       return fail(
         "COV-04",
         "VETO",
-        `Daily loss ${account.dayPnlPct.toFixed(2)}% has breached the mandate limit of ` +
+        `Daily loss ${pct.toFixed(2)}% has breached the mandate limit of ` +
           `${policy.dailyHaltPct}%. Halting entries for the session.`
       );
     }

@@ -13,9 +13,9 @@
 
 import * as money from "@/lib/money";
 import { fail, pass, type InvariantEvaluator } from "@/lib/safety/types";
-import type { OptionContract } from "@/types/domain";
+import type { OptionContractSnapshot } from "@/types/domain";
 
-function widthPct(contract: OptionContract): number | null {
+function widthPct(contract: OptionContractSnapshot): number | null {
   try {
     const bid = money.parse(contract.bid);
     const ask = money.parse(contract.ask);
@@ -46,14 +46,12 @@ export const covenant05: InvariantEvaluator = {
       return fail(
         "COV-05",
         "VETO",
-        `DTE ${intent.dte} is outside the mandate band ${policy.minDte}–${policy.maxDte}.`
+        `DTE ${intent.dte} is outside the mandate band ${policy.minDte}-${policy.maxDte}.`
       );
     }
 
-    const bySymbol = new Map(market.contracts.map((c) => [c.symbol, c]));
-
     for (const leg of intent.legs) {
-      const contract = bySymbol.get(leg.symbol);
+      const contract = market.contracts[leg.symbol];
       if (contract === undefined) {
         return fail(
           "COV-05",
@@ -64,11 +62,11 @@ export const covenant05: InvariantEvaluator = {
 
       const quoteAgeMs = now.getTime() - Date.parse(contract.quoteTimestamp);
       if (!Number.isFinite(quoteAgeMs) || quoteAgeMs > policy.maxQuoteAgeMs) {
+        const age = Number.isFinite(quoteAgeMs) ? `${quoteAgeMs}ms` : "of unknown age";
         return fail(
           "COV-05",
           "ABSTAIN",
-          `Quote for ${leg.symbol} is ${Number.isFinite(quoteAgeMs) ? `${quoteAgeMs}ms` : "of unknown age"}, ` +
-            `beyond the ${policy.maxQuoteAgeMs}ms freshness band.`
+          `Quote for ${leg.symbol} is ${age}, beyond the ${policy.maxQuoteAgeMs}ms freshness band.`
         );
       }
 
@@ -101,7 +99,7 @@ export const covenant05: InvariantEvaluator = {
         );
       }
 
-      if (contract.delta === null) {
+      if (contract.delta === undefined || !Number.isFinite(contract.delta)) {
         return fail("COV-05", "ABSTAIN", `No delta available for ${leg.symbol}.`);
       }
       const absDelta = Math.abs(contract.delta);
@@ -110,7 +108,7 @@ export const covenant05: InvariantEvaluator = {
           "COV-05",
           "VETO",
           `${leg.symbol} delta ${absDelta.toFixed(3)} is outside the mandate band ` +
-            `${policy.minDelta}–${policy.maxDelta}.`
+            `${policy.minDelta}-${policy.maxDelta}.`
         );
       }
     }

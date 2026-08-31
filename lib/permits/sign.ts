@@ -12,7 +12,6 @@ import { createPrivateKey, createPublicKey, randomBytes, randomUUID, sign } from
 import type { KeyObject } from "node:crypto";
 
 import { hashExcluding, sha256Hex } from "@/lib/canonical";
-import { permitNonceNamespace, permitTtlSeconds } from "@/lib/env";
 import type { TradePermit } from "@/types/domain";
 
 /** Everything a permit needs except the parts signing itself produces. */
@@ -69,8 +68,31 @@ export function permitSigningPayload(permit: Omit<TradePermit, "signature">): st
   return hashExcluding({ ...permit, signature: "" } as TradePermit, "signature");
 }
 
+/**
+ * Permit signing deliberately does NOT go through lib/env/server.ts.
+ *
+ * That validator requires Alpaca credentials to be present, and the signing
+ * module must not need a broker credential to exist in order to function —
+ * the whole point of the capability split is that these two authorities are
+ * independent. So the two knobs it needs are read directly, with defaults.
+ */
+function nonceNamespace(): string {
+  const raw = process.env.PERMIT_NONCE_NAMESPACE;
+  return raw === undefined || raw.trim() === "" ? "covenant-paper" : raw.trim();
+}
+
+function defaultTtlSeconds(): number {
+  const raw = process.env.PERMIT_TTL_SECONDS;
+  const parsed = raw === undefined ? Number.NaN : Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed)) return 60;
+  if (parsed <= 0 || parsed > 300) {
+    throw new Error(`PERMIT_TTL_SECONDS must be 1..300, got ${raw}`);
+  }
+  return parsed;
+}
+
 export function newNonce(): string {
-  return `${permitNonceNamespace()}:${randomBytes(16).toString("hex")}`;
+  return `${nonceNamespace()}:${randomBytes(16).toString("hex")}`;
 }
 
 /**
@@ -83,7 +105,7 @@ export function newNonce(): string {
 export function signPermit(claims: PermitClaims, options: SignOptions = {}): TradePermit {
   const privateKey = loadPrivateKey(options.privateKeyPem);
   const now = options.now ?? new Date();
-  const ttl = options.ttlSeconds ?? permitTtlSeconds();
+  const ttl = options.ttlSeconds ?? defaultTtlSeconds();
 
   const unsigned: Omit<TradePermit, "signature"> = {
     ...claims,

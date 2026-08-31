@@ -20,11 +20,26 @@ const LIB_ROOT = join(process.cwd(), "lib");
 const BROKER_CREDENTIAL_PATTERN = /ALPACA_API_(SECRET_KEY|KEY_ID)/;
 const SIGNING_KEY_PATTERN = /PERMIT_SIGNING_PRIVATE_KEY/;
 
-/** The only files permitted to read Alpaca credentials. */
-const BROKER_CREDENTIAL_ALLOWLIST = new Set(["lib/execution/executor.ts", "lib/alpaca/client.ts"]);
+/**
+ * The only files permitted to name Alpaca credentials.
+ *
+ * - executor.ts   : the order WRITE path (the one capability that matters)
+ * - alpaca/client : the read path
+ * - env/server.ts : validates that they are present and well-formed. It names
+ *                   them; it is not a distribution channel, which is what the
+ *                   lane-scoped tests below actually pin down.
+ */
+const BROKER_CREDENTIAL_ALLOWLIST = new Set([
+  "lib/execution/executor.ts",
+  "lib/alpaca/client.ts",
+  "lib/env/server.ts"
+]);
 
-/** The only file permitted to read the permit signing private key. */
-const SIGNING_KEY_ALLOWLIST = new Set(["lib/permits/sign.ts"]);
+/**
+ * The only files permitted to name the permit signing private key.
+ * sign.ts reads it; env/server.ts only validates its shape.
+ */
+const SIGNING_KEY_ALLOWLIST = new Set(["lib/permits/sign.ts", "lib/env/server.ts"]);
 
 function walk(dir: string): string[] {
   let out: string[] = [];
@@ -72,6 +87,23 @@ describe("capability boundary", () => {
       .map((f) => f.path);
 
     expect(offenders).toEqual([]);
+  });
+
+  it("the safety lane holds no credential either — only the executor submits", () => {
+    const offenders = libFiles()
+      .filter((f) => f.path.startsWith("lib/safety/"))
+      .filter((f) => BROKER_CREDENTIAL_PATTERN.test(f.source))
+      .map((f) => f.path);
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("permit signing does not depend on broker environment validation", () => {
+    // If sign.ts needed getServerEnv(), a missing Alpaca key would stop the
+    // kernel signing permits — coupling two authorities that must stay apart.
+    const signFile = libFiles().find((f) => f.path === "lib/permits/sign.ts");
+    expect(signFile).toBeDefined();
+    expect(signFile!.source).not.toMatch(/from "@\/lib\/env\/server"/);
   });
 
   it("the executor can verify a signature but never mint one", () => {

@@ -2,7 +2,7 @@
   "name": "covenant",
   "version": "0.1.0",
   "private": true,
-  "description": "Proof-carrying options agent built with Next.js and TypeScript. Paper trading only.",
+  "description": "Proof-carrying options agent demo built with Next.js and TypeScript.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,10 +12,16 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "verify": "tsx scripts/verify.ts",
+    "audit": "tsx scripts/audit.ts",
+    "keygen": "tsx scripts/keygen.ts",
     "tick": "tsx scripts/tick.ts",
-    "keygen": "tsx scripts/keygen.ts"
+    "validate:walk-forward": "tsx scripts/validate-walk-forward.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "1.1.0",
+    "decimal.js": "10.6.0",
+    "dotenv": "17.4.2",
+    "drizzle-orm": "0.45.2",
     "next": "16.3.3",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -25,6 +31,7 @@
     "@types/node": "26.4.0",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.5",
+    "drizzle-kit": "0.31.10",
     "fast-check": "4.9.0",
     "tsx": "4.23.13",
     "typescript": "7.0.2",

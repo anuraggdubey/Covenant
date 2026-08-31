@@ -10,6 +10,7 @@
  * host's timezone is not a trading session.
  */
 
+import { dayPnlPctOf } from "@/lib/safety/state";
 import type { AccountSnapshot, MarketClock, SessionStatus } from "@/types/domain";
 
 export function initialSession(clock: MarketClock): SessionStatus {
@@ -22,15 +23,10 @@ export function initialSession(clock: MarketClock): SessionStatus {
  * A HALTED session becomes ACTIVE only when the broker reports a different
  * trading date than the one the halt was recorded against.
  */
-export function reconcileSession(
-  current: SessionStatus,
-  clock: MarketClock,
-  now: Date = new Date()
-): SessionStatus {
+export function reconcileSession(current: SessionStatus, clock: MarketClock): SessionStatus {
   if (clock.sessionDate === current.sessionDate) return current;
 
   // A verified new trading session. This is the only path back to ACTIVE.
-  void now;
   return { state: "ACTIVE", sessionDate: clock.sessionDate, haltedAt: null, haltReason: null };
 }
 
@@ -47,12 +43,16 @@ export function halt(current: SessionStatus, reason: string, now: Date = new Dat
 /**
  * Has the account breached the mandate's daily loss limit?
  *
- * `dailyHaltPct` is negative (-1.25 means -1.25%). We compare on the account's
- * own reported day P&L percentage so the check does not depend on our
- * arithmetic agreeing with the broker's.
+ * Returns null when the snapshot carries no day P&L — the caller must abstain
+ * rather than read "unknown" as "fine".
  */
-export function breachesDailyLimit(account: AccountSnapshot, dailyHaltPct: number): boolean {
-  return account.dayPnlPct <= dailyHaltPct;
+export function breachesDailyLimit(
+  account: AccountSnapshot,
+  dailyHaltPct: number
+): boolean | null {
+  const pct = dayPnlPctOf(account);
+  if (pct === null) return null;
+  return pct <= dailyHaltPct;
 }
 
 /** Convenience for the tick loop: fold a clock reading and P&L into one state. */
@@ -63,11 +63,13 @@ export function nextSessionState(
   dailyHaltPct: number,
   now: Date = new Date()
 ): SessionStatus {
-  const reconciled = reconcileSession(current, clock, now);
-  if (breachesDailyLimit(account, dailyHaltPct)) {
+  const reconciled = reconcileSession(current, clock);
+  const breached = breachesDailyLimit(account, dailyHaltPct);
+  if (breached === true) {
+    const pct = dayPnlPctOf(account) ?? 0;
     return halt(
       reconciled,
-      `Daily loss ${account.dayPnlPct.toFixed(2)}% breached the mandate limit of ${dailyHaltPct}%.`,
+      `Daily loss ${pct.toFixed(2)}% breached the mandate limit of ${dailyHaltPct}%.`,
       now
     );
   }

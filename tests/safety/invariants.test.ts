@@ -20,27 +20,21 @@ import {
 } from "@/lib/safety/invariants";
 import type { InvariantContext } from "@/lib/safety/types";
 import { ALL_INVARIANTS } from "@/types/domain";
-import type { OpenPosition } from "@/types/domain";
 
-import { FIXED_NOW, SHORT_LEG, SPY_LEGS, buildContracts, buildWorld } from "../fixtures";
+import {
+  FIXED_NOW,
+  SHORT_LEG,
+  SPY_LEGS,
+  buildContracts,
+  buildContractsMissingLongLeg,
+  buildOpenPosition as openPosition,
+  buildWorld
+} from "../fixtures";
 
 function contextFrom(overrides: Parameters<typeof buildWorld>[0] = {}): InvariantContext {
   const world = buildWorld(overrides);
   return { ...world, now: FIXED_NOW };
 }
-
-const openPosition = (over: Partial<OpenPosition> = {}): OpenPosition => ({
-  structureId: "pos-1",
-  underlying: "SPY",
-  structure: "BULL_CALL_DEBIT",
-  legs: SPY_LEGS,
-  quantity: 1,
-  standaloneMaxLoss: "240.00",
-  openedAt: FIXED_NOW.toISOString(),
-  expiry: "2026-09-18",
-  dte: 18,
-  ...over
-});
 
 describe("registry", () => {
   it("registers all eight invariants exactly once", () => {
@@ -134,42 +128,42 @@ describe("COV-05 — mandate bands", () => {
   });
 
   it("abstains when a leg is absent from the snapshot we decided on", () => {
-    const context = contextFrom({ market: { contracts: buildContracts().slice(0, 1) } });
+    const context = contextFrom({ market: { contracts: buildContractsMissingLongLeg() } });
     expect(covenant05.evaluate(context)).toMatchObject({ ok: false, action: "ABSTAIN" });
   });
 
   it("abstains on a stale quote", () => {
     const stale = new Date(FIXED_NOW.getTime() - 30_000).toISOString();
     const context = contextFrom({
-      market: { contracts: buildContracts([{ quoteTimestamp: stale }]) }
+      market: { contracts: buildContracts({ quoteTimestamp: stale }) }
     });
     expect(covenant05.evaluate(context)).toMatchObject({ ok: false, action: "ABSTAIN" });
   });
 
   it("vetoes a spread too wide to fill without leaking the edge", () => {
     const context = contextFrom({
-      market: { contracts: buildContracts([{ bid: "4.00", ask: "6.20" }]) }
+      market: { contracts: buildContracts({ bid: "4.00", ask: "6.20" }) }
     });
     expect(covenant05.evaluate(context)).toMatchObject({ ok: false, action: "VETO" });
   });
 
   it("vetoes illiquid contracts", () => {
     const context = contextFrom({
-      market: { contracts: buildContracts([{ openInterest: 10 }]) }
+      market: { contracts: buildContracts({ openInterest: 10 }) }
     });
     expect(covenant05.evaluate(context)).toMatchObject({ ok: false, action: "VETO" });
   });
 
   it("vetoes a delta outside the band", () => {
     const context = contextFrom({
-      market: { contracts: buildContracts([{ delta: 0.92 }]) }
+      market: { contracts: buildContracts({ delta: 0.92 }) }
     });
     expect(covenant05.evaluate(context)).toMatchObject({ ok: false, action: "VETO" });
   });
 
   it("abstains when delta is unavailable", () => {
     const context = contextFrom({
-      market: { contracts: buildContracts([{ delta: null }]) }
+      market: { contracts: buildContracts({ delta: undefined }) }
     });
     expect(covenant05.evaluate(context)).toMatchObject({ ok: false, action: "ABSTAIN" });
   });
@@ -230,7 +224,7 @@ describe("COV-08 — fail closed", () => {
   });
 
   it("vetoes an account without level 3 options approval", () => {
-    const context = contextFrom({ account: { optionsApprovedLevel: 2 } });
+    const context = contextFrom({ account: { optionsLevel: 2 } });
     expect(covenant08.evaluate(context)).toMatchObject({ ok: false, action: "VETO" });
   });
 
@@ -244,7 +238,7 @@ describe("COV-08 — fail closed", () => {
     const context: InvariantContext = {
       ...world,
       now: FIXED_NOW,
-      market: { ...world.market, clock: { ...world.market.clock, isOpen: false } }
+      market: { ...world.market, clock: { ...world.market.clock!, isOpen: false } }
     };
     // Mutating the snapshot also breaks its hash, which is itself an abstain.
     expect(covenant08.evaluate(context)).toMatchObject({ ok: false, action: "ABSTAIN" });

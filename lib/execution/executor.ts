@@ -15,7 +15,7 @@
  */
 
 import { hashObject } from "@/lib/canonical";
-import { tradingBaseUrl } from "@/lib/env";
+import { getServerEnv } from "@/lib/env/server";
 import { computeIntentHash } from "@/lib/hashes";
 import { defaultNonceStore, type NonceStore } from "@/lib/permits/nonce";
 import { isExpired, verifyPermitSignature } from "@/lib/permits/verify";
@@ -289,7 +289,7 @@ export function alpacaPaperTransport(): OrderTransport {
         throw new Error("Alpaca paper credentials are not configured; refusing to submit.");
       }
 
-      const response = await fetch(`${tradingBaseUrl()}/v2/orders`, {
+      const response = await fetch(`${getServerEnv().ALPACA_TRADING_BASE_URL}/v2/orders`, {
         method: "POST",
         headers: {
           "APCA-API-KEY-ID": keyId,

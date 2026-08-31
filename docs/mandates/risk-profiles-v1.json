@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "accountEquityUsd": 100000,
+  "profiles": {
+    "CONSERVATIVE": {
+      "perTradeMaxLossPct": 0.0035,
+      "portfolioHeatMaxLossPct": 0.015,
+      "dailyHaltPct": -0.0075,
+      "minDte": 14,
+      "maxDte": 30,
+      "minDelta": 0.2,
+      "maxDelta": 0.65,
+      "maxQuoteAgeMs": 45000,
+      "maxBidAskWidthPct": 0.18,
+      "minOpenInterest": 250,
+      "minVolume": 25,
+      "duplicateExposureCooldownMinutes": 60,
+      "exitAttemptDeadlineMinutes": 10
+    },
+    "BALANCED": {
+      "perTradeMaxLossPct": 0.006,
+      "portfolioHeatMaxLossPct": 0.025,
+      "dailyHaltPct": -0.0125,
+      "minDte": 7,
+      "maxDte": 21,
+      "minDelta": 0.2,
+      "maxDelta": 0.8,
+      "maxQuoteAgeMs": 60000,
+      "maxBidAskWidthPct": 0.25,
+      "minOpenInterest": 100,
+      "minVolume": 10,
+      "duplicateExposureCooldownMinutes": 30,
+      "exitAttemptDeadlineMinutes": 15
+    },
+    "AGGRESSIVE": {
+      "perTradeMaxLossPct": 0.01,
+      "portfolioHeatMaxLossPct": 0.04,
+      "dailyHaltPct": -0.02,
+      "minDte": 7,
+      "maxDte": 30,
+      "minDelta": 0.15,
+      "maxDelta": 0.85,
+      "maxQuoteAgeMs": 45000,
+      "maxBidAskWidthPct": 0.3,
+      "minOpenInterest": 75,
+      "minVolume": 5,
+      "duplicateExposureCooldownMinutes": 20,
+      "exitAttemptDeadlineMinutes": 10
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 2,
+  "retrievedAt": "2026-08-30T12:20:00.000Z",
+  "purpose": "Independent underlying-price signal validation; not Alpaca execution evidence",
+  "license": "CC0-1.0",
+  "period": {
+    "start": "2019-01-02",
+    "endInclusive": "2023-12-27",
+    "interval": "1d"
+  },
+  "series": [
+    {
+      "symbol": "SPY",
+      "dataset": "SPY Daily Stock Info (01/1993 - 12/2023)",
+      "datasetUrl": "https://www.kaggle.com/datasets/seansaliga/spy-start-10312023/data",
+      "rawFile": "SPY Regression.csv",
+      "rawSha256": "0de2f3b2230c39096b3d97ec4ecc40bf1baaeb633f2ec92eb359632861d637c9",
+      "file": "data/spy-cc0-daily.csv",
+      "sha256": "94fc45c79db0dc5232432922f743f51dcd65feabe126c4bc623efda7dc6e601f",
+      "sessions": 1256,
+      "firstSession": "2019-01-02",
+      "lastSession": "2023-12-27"
+    },
+    {
+      "symbol": "QQQ",
+      "dataset": "Invesco QQQ Trust (QQQ) Stock Performance",
+      "datasetUrl": "https://www.kaggle.com/datasets/nitirajkulkarni/qqq-stock-performance",
+      "rawFile": "QQQ_stock_data.csv",
+      "rawSha256": "2504a52643118df7637e116b2cb966327a67e6d3c2f96bd708fa1743ab733419",
+      "file": "data/qqq-cc0-daily.csv",
+      "sha256": "82f4fe9698defbe492918537f03b7ab783c7a754ee51a43260922018ac35ce1e",
+      "sessions": 1256,
+      "firstSession": "2019-01-02",
+      "lastSession": "2023-12-27"
+    }
+  ]
+}

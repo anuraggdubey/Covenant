@@ -1,13 +1,16 @@
 /**
  * Deterministic fixtures for Lane B tests.
  *
- * Every value here is fake but structurally exact — the point is that the
- * kernel and executor cannot tell the difference, so a test that passes here
- * is a claim about the real code path, not about a mock.
+ * Every value is fake but structurally exact — the kernel and executor cannot
+ * tell the difference, so a test that passes here is a claim about the real
+ * code path, not about a mock.
  *
  * `buildWorld()` returns a mutually consistent policy + snapshots + intent
- * that APPROVES cleanly. Every attack test starts from that and breaks one
- * thing, which keeps each test's failure attributable to one cause.
+ * that APPROVES cleanly. Each attack test starts from that and breaks exactly
+ * one thing, which keeps every failure attributable to one cause.
+ *
+ * Shapes follow Lane A's snapshot types (see types/domain.ts merge note):
+ * one MarketSnapshot per underlying, contracts keyed by OCC symbol.
  */
 
 import { generateKeyPairSync } from "node:crypto";
@@ -25,7 +28,8 @@ import type {
   AccountSnapshot,
   Leg,
   MarketSnapshot,
-  OptionContract,
+  OpenPosition,
+  OptionContractSnapshot,
   Policy,
   SessionStatus,
   TradeIntent,
@@ -102,42 +106,55 @@ export const SPY_LEGS: Leg[] = [
   { symbol: SHORT_LEG, ratioQty: 1, side: "sell", positionIntent: "sell_to_open" }
 ];
 
-export function buildContracts(overrides: Partial<OptionContract>[] = []): OptionContract[] {
-  const base: OptionContract[] = [
-    {
+/**
+ * Contracts keyed by symbol. `overrides` is applied to the LONG leg by
+ * default, since that is the one most band tests perturb.
+ */
+export function buildContracts(
+  longOverrides: Partial<OptionContractSnapshot> = {},
+  shortOverrides: Partial<OptionContractSnapshot> = {}
+): Record<string, OptionContractSnapshot> {
+  return {
+    [LONG_LEG]: {
       symbol: LONG_LEG,
-      underlying: "SPY",
-      expiry: "2026-09-18",
       strike: "560.00",
+      expiration: "2026-09-18",
       type: "call",
       bid: "5.00",
       ask: "5.20",
       bidSize: 40,
       askSize: 55,
-      delta: 0.42,
       impliedVolatility: 0.17,
+      delta: 0.42,
       openInterest: 1200,
       volume: 300,
-      quoteTimestamp: FIXED_NOW.toISOString()
+      quoteTimestamp: FIXED_NOW.toISOString(),
+      ...longOverrides
     },
-    {
+    [SHORT_LEG]: {
       symbol: SHORT_LEG,
-      underlying: "SPY",
-      expiry: "2026-09-18",
       strike: "565.00",
+      expiration: "2026-09-18",
       type: "call",
       bid: "2.60",
       ask: "2.80",
       bidSize: 30,
       askSize: 35,
-      delta: 0.3,
       impliedVolatility: 0.166,
+      delta: 0.3,
       openInterest: 900,
       volume: 210,
-      quoteTimestamp: FIXED_NOW.toISOString()
+      quoteTimestamp: FIXED_NOW.toISOString(),
+      ...shortOverrides
     }
-  ];
-  return base.map((contract, index) => ({ ...contract, ...(overrides[index] ?? {}) }));
+  };
+}
+
+/** Contracts with the long leg removed, for the "absent from snapshot" case. */
+export function buildContractsMissingLongLeg(): Record<string, OptionContractSnapshot> {
+  const all = buildContracts();
+  delete all[LONG_LEG];
+  return all;
 }
 
 // ---------------------------------------------------------------------------
@@ -146,17 +163,19 @@ export function buildContracts(overrides: Partial<OptionContract>[] = []): Optio
 
 export function buildAccountSnapshot(overrides: Partial<AccountSnapshot> = {}): AccountSnapshot {
   const base: AccountSnapshot = {
-    id: "acct-snap-1",
-    capturedAt: FIXED_NOW.toISOString(),
+    timestamp: FIXED_NOW.toISOString(),
     accountId: "PA-TEST-0001",
     equity: "100000.00",
-    lastEquity: "100000.00",
+    cash: "100000.00",
     buyingPower: "100000.00",
-    optionsApprovedLevel: 3,
-    tradingBlocked: false,
-    dayPnl: "0.00",
+    portfolioHeatPct: 0,
+    dailyRealizedPnl: "0.00",
+    dailyUnrealizedPnl: "0.00",
+    optionsLevel: 3,
+    status: "ACTIVE",
     dayPnlPct: 0,
     openPositions: [],
+    tradingBlocked: false,
     snapshotHash: "",
     ...overrides
   };
@@ -165,17 +184,17 @@ export function buildAccountSnapshot(overrides: Partial<AccountSnapshot> = {}): 
 
 export function buildMarketSnapshot(overrides: Partial<MarketSnapshot> = {}): MarketSnapshot {
   const base: MarketSnapshot = {
-    id: "mkt-snap-1",
-    capturedAt: FIXED_NOW.toISOString(),
+    timestamp: FIXED_NOW.toISOString(),
     feed: "indicative",
+    underlying: "SPY",
+    underlyingPrice: "561.20",
+    contracts: buildContracts(),
     clock: {
       isOpen: true,
       sessionDate: SESSION_DATE,
       nextOpen: "2026-09-01T13:30:00.000Z",
       nextClose: "2026-08-31T20:00:00.000Z"
     },
-    underlyings: [{ underlying: "SPY", last: "561.20", quoteTimestamp: FIXED_NOW.toISOString() }],
-    contracts: buildContracts(),
     snapshotHash: "",
     ...overrides
   };
@@ -188,6 +207,21 @@ export function buildSession(overrides: Partial<SessionStatus> = {}): SessionSta
     sessionDate: SESSION_DATE,
     haltedAt: null,
     haltReason: null,
+    ...overrides
+  };
+}
+
+export function buildOpenPosition(overrides: Partial<OpenPosition> = {}): OpenPosition {
+  return {
+    structureId: "pos-1",
+    underlying: "SPY",
+    structure: "BULL_CALL_DEBIT",
+    legs: SPY_LEGS,
+    quantity: 1,
+    standaloneMaxLoss: "240.00",
+    openedAt: FIXED_NOW.toISOString(),
+    expiry: "2026-09-18",
+    dte: 18,
     ...overrides
   };
 }
@@ -239,16 +273,16 @@ export interface World {
   intent: TradeIntent;
 }
 
+export interface WorldOverrides {
+  policy?: Partial<Policy>;
+  account?: Partial<AccountSnapshot>;
+  market?: Partial<MarketSnapshot>;
+  session?: Partial<SessionStatus>;
+  intent?: Partial<TradeIntent>;
+}
+
 /** A mutually consistent world that clears every invariant. */
-export function buildWorld(
-  overrides: {
-    policy?: Partial<Policy>;
-    account?: Partial<AccountSnapshot>;
-    market?: Partial<MarketSnapshot>;
-    session?: Partial<SessionStatus>;
-    intent?: Partial<TradeIntent>;
-  } = {}
-): World {
+export function buildWorld(overrides: WorldOverrides = {}): World {
   const policy = buildPolicy(overrides.policy);
   const account = buildAccountSnapshot(overrides.account);
   const market = buildMarketSnapshot(overrides.market);

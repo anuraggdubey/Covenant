@@ -6,9 +6,14 @@
  * portfolio risk across overlapping option positions is hard, and a number
  * we cannot verify is worse than a number that overstates risk. Summing
  * standalone defined-risk envelopes is easy to check and never understates.
+ *
+ * Note we sum the envelopes ourselves rather than trusting the snapshot's
+ * precomputed `portfolioHeatPct`. The invariant has to be checkable from the
+ * facts, not from someone else's arithmetic.
  */
 
 import * as money from "@/lib/money";
+import { openPositionsOf } from "@/lib/safety/state";
 import { fail, pass, perContractMaxLoss, type InvariantEvaluator } from "@/lib/safety/types";
 
 export const covenant03: InvariantEvaluator = {
@@ -16,13 +21,22 @@ export const covenant03: InvariantEvaluator = {
   title: "Portfolio heat stays under the mandate cap",
   enforcedAt: "kernel",
   evaluate({ policy, intent, account }) {
+    const positions = openPositionsOf(account);
+    if (positions === null) {
+      return fail(
+        "COV-03",
+        "ABSTAIN",
+        "Account snapshot carries no open-position list, so portfolio heat cannot be summed."
+      );
+    }
+
     let equity: bigint;
     let incoming: bigint;
     let openRisk: bigint;
     try {
       equity = money.parse(account.equity);
       incoming = money.parse(intent.standaloneMaxLoss);
-      openRisk = money.sum(account.openPositions.map((p) => money.parse(p.standaloneMaxLoss)));
+      openRisk = money.sum(positions.map((p) => money.parse(p.standaloneMaxLoss)));
     } catch {
       return fail("COV-03", "ABSTAIN", "Open position risk could not be summed from the snapshot.");
     }

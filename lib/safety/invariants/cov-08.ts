@@ -12,6 +12,7 @@
  */
 
 import { computeAccountSnapshotHash, computeMarketSnapshotHash } from "@/lib/hashes";
+import { clockOf, isTradingBlocked } from "@/lib/safety/state";
 import { fail, pass, type InvariantEvaluator } from "@/lib/safety/types";
 
 export const covenant08: InvariantEvaluator = {
@@ -30,23 +31,31 @@ export const covenant08: InvariantEvaluator = {
       );
     }
 
-    if (account.tradingBlocked) {
-      return fail("COV-08", "VETO", "The broker reports this account as trading-blocked.");
-    }
-    if (account.optionsApprovedLevel < 3) {
+    if (isTradingBlocked(account)) {
       return fail(
         "COV-08",
         "VETO",
-        `Account options level is ${account.optionsApprovedLevel}; multi-leg defined-risk ` +
+        `The broker reports this account as unavailable for trading (status ${account.status}).`
+      );
+    }
+    if (account.optionsLevel < 3) {
+      return fail(
+        "COV-08",
+        "VETO",
+        `Account options level is ${account.optionsLevel}; multi-leg defined-risk ` +
           `spreads need level 3.`
       );
     }
 
-    if (!market.clock.isOpen) {
+    const clock = clockOf(market);
+    if (clock === null) {
+      return fail("COV-08", "ABSTAIN", "Market snapshot carries no broker clock.");
+    }
+    if (!clock.isOpen) {
       return fail("COV-08", "ABSTAIN", "The market is closed. No entry is attempted.");
     }
 
-    // The snapshots must be the ones the intent was computed against…
+    // The snapshots must be the ones the intent was computed against...
     if (intent.marketSnapshotHash !== market.snapshotHash) {
       return fail(
         "COV-08",
@@ -62,7 +71,7 @@ export const covenant08: InvariantEvaluator = {
       );
     }
 
-    // …and each snapshot must match its own recorded hash.
+    // ...and each snapshot must match its own recorded hash.
     if (computeMarketSnapshotHash(market) !== market.snapshotHash) {
       return fail("COV-08", "ABSTAIN", "Market snapshot does not match its own hash.");
     }

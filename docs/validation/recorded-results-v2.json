@@ -1,0 +1,115 @@
+{
+  "status": "RECORDED",
+  "claimScope": "Underlying 5/20 trend signal evidence only; not options strategy, fill, or Alpaca performance",
+  "methodology": {
+    "calibrationSessions": 252,
+    "horizonSessions": 5,
+    "nonOverlappingOutcomes": true,
+    "trendRule": "BULLISH when SMA5 > SMA20 * 1.002; BEARISH when SMA5 < SMA20 * 0.998; otherwise NEUTRAL",
+    "regimeRule": "Current 20-session close-to-close volatility versus trailing 252-session 33rd/67th percentiles, using prior observations only",
+    "roundTripCost": 0.001,
+    "optimizedParameters": false
+  },
+  "reports": [
+    {
+      "symbol": "SPY",
+      "sourceSessions": 1256,
+      "calibrationStart": "2019-01-02",
+      "firstOosSignalDate": "2020-01-02",
+      "lastOosOutcomeDate": "2023-12-21",
+      "oosCoverageYears": 3.967,
+      "overall": {
+        "observations": 200,
+        "activeSignals": 182,
+        "neutralSignals": 18,
+        "directionalAccuracy": 0.582418,
+        "meanGrossSignedFiveSessionReturn": 0.001534,
+        "meanAfterCostSignedFiveSessionReturn": 0.000534,
+        "medianAfterCostSignedFiveSessionReturn": 0.002179,
+        "tenthPercentileAfterCostSignedReturn": -0.034418
+      },
+      "byRegime": {
+        "LOW": {
+          "observations": 83,
+          "activeSignals": 76,
+          "neutralSignals": 7,
+          "directionalAccuracy": 0.605263,
+          "meanGrossSignedFiveSessionReturn": 0.002318,
+          "meanAfterCostSignedFiveSessionReturn": 0.001318,
+          "medianAfterCostSignedFiveSessionReturn": 0.003053,
+          "tenthPercentileAfterCostSignedReturn": -0.018726
+        },
+        "MEDIUM": {
+          "observations": 50,
+          "activeSignals": 46,
+          "neutralSignals": 4,
+          "directionalAccuracy": 0.586957,
+          "meanGrossSignedFiveSessionReturn": -0.001349,
+          "meanAfterCostSignedFiveSessionReturn": -0.002349,
+          "medianAfterCostSignedFiveSessionReturn": 0.002065,
+          "tenthPercentileAfterCostSignedReturn": -0.035405
+        },
+        "HIGH": {
+          "observations": 67,
+          "activeSignals": 60,
+          "neutralSignals": 7,
+          "directionalAccuracy": 0.55,
+          "meanGrossSignedFiveSessionReturn": 0.002752,
+          "meanAfterCostSignedFiveSessionReturn": 0.001752,
+          "medianAfterCostSignedFiveSessionReturn": 0.001318,
+          "tenthPercentileAfterCostSignedReturn": -0.042706
+        }
+      }
+    },
+    {
+      "symbol": "QQQ",
+      "sourceSessions": 1256,
+      "calibrationStart": "2019-01-02",
+      "firstOosSignalDate": "2020-01-02",
+      "lastOosOutcomeDate": "2023-12-21",
+      "oosCoverageYears": 3.967,
+      "overall": {
+        "observations": 200,
+        "activeSignals": 192,
+        "neutralSignals": 8,
+        "directionalAccuracy": 0.536458,
+        "meanGrossSignedFiveSessionReturn": 0.001438,
+        "meanAfterCostSignedFiveSessionReturn": 0.000438,
+        "medianAfterCostSignedFiveSessionReturn": 0.003768,
+        "tenthPercentileAfterCostSignedReturn": -0.041741
+      },
+      "byRegime": {
+        "LOW": {
+          "observations": 83,
+          "activeSignals": 80,
+          "neutralSignals": 3,
+          "directionalAccuracy": 0.55,
+          "meanGrossSignedFiveSessionReturn": 0.002468,
+          "meanAfterCostSignedFiveSessionReturn": 0.001468,
+          "medianAfterCostSignedFiveSessionReturn": 0.003136,
+          "tenthPercentileAfterCostSignedReturn": -0.027691
+        },
+        "MEDIUM": {
+          "observations": 49,
+          "activeSignals": 47,
+          "neutralSignals": 2,
+          "directionalAccuracy": 0.446809,
+          "meanGrossSignedFiveSessionReturn": -0.004713,
+          "meanAfterCostSignedFiveSessionReturn": -0.005713,
+          "medianAfterCostSignedFiveSessionReturn": -0.005284,
+          "tenthPercentileAfterCostSignedReturn": -0.05362
+        },
+        "HIGH": {
+          "observations": 68,
+          "activeSignals": 65,
+          "neutralSignals": 3,
+          "directionalAccuracy": 0.584615,
+          "meanGrossSignedFiveSessionReturn": 0.004619,
+          "meanAfterCostSignedFiveSessionReturn": 0.003619,
+          "medianAfterCostSignedFiveSessionReturn": 0.0088,
+          "tenthPercentileAfterCostSignedReturn": -0.053053
+        }
+      }
+    }
+  ]
+}

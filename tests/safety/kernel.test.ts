@@ -179,7 +179,7 @@ describe("Safety Kernel — refusals issue no permit", () => {
   });
 
   it("vetoes when the day's loss has breached the mandate limit (COV-04)", async () => {
-    const world = buildWorld({ account: { dayPnl: "-1400.00", dayPnlPct: -1.4 } });
+    const world = buildWorld({ account: { dayPnlPct: -1.4 } });
     const keys = testKeyPair();
 
     const result = await evaluate(world.intent, world.policy, kernelOptions(world, keys));

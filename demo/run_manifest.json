@@ -1,0 +1,1008 @@
+{
+  "runId": "covenant-demo-run-1",
+  "createdAt": "2026-08-31T14:30:00.000Z",
+  "policyHash": "4a633e26dde0ffba6d21212bcfa05d10bc14aee066ba1f8f86a1d0c455933675",
+  "signingKeyId": "1fc2cf5735e3bd4b",
+  "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAja8yoHnPkPQ2+cXpF28j3NBDEP8BNp5nRGPrxLZ0grM=\n-----END PUBLIC KEY-----\n",
+  "codeRevision": "demo",
+  "events": [
+    {
+      "eventId": "evt-0001",
+      "eventType": "POLICY_ACTIVATED",
+      "payloadHash": "0ac8656431a52fc89bc43e43426c7efe54715cf4ddb98c32bf611de4fcb3ed68",
+      "previousEventHash": null,
+      "timestamp": "2026-08-31T14:30:00.000Z",
+      "codeRevision": "demo",
+      "actor": "operator",
+      "payload": {
+        "policy": {
+          "id": "demo-policy",
+          "version": 1,
+          "status": "ACTIVE",
+          "policyHash": "4a633e26dde0ffba6d21212bcfa05d10bc14aee066ba1f8f86a1d0c455933675",
+          "createdAt": "2026-08-30T09:00:00.000Z",
+          "activatedAt": "2026-08-30T09:05:00.000Z",
+          "plainEnglishEcho": "Grow steadily. Never risk more than 0.6% on a trade or 2.5% of the book. Defined-risk options only. Stop for the day at -1.25%.",
+          "allowedUnderlyings": [
+            "SPY",
+            "QQQ"
+          ],
+          "allowedStructures": [
+            "BULL_CALL_DEBIT",
+            "BEAR_PUT_DEBIT",
+            "CREDIT_VERTICAL"
+          ],
+          "riskProfile": "BALANCED",
+          "perTradeMaxLossPct": 0.6,
+          "portfolioHeatMaxLossPct": 2.5,
+          "dailyHaltPct": -1.25,
+          "minDte": 7,
+          "maxDte": 21,
+          "minDelta": 0.15,
+          "maxDelta": 0.45,
+          "maxQuoteAgeMs": 5000,
+          "maxBidAskWidthPct": 8,
+          "minOpenInterest": 250,
+          "minVolume": 50,
+          "duplicateExposureCooldownMinutes": 120,
+          "exitAttemptDeadlineMinutes": 60,
+          "missingStateAction": "ABSTAIN",
+          "modelAuthority": "VETO_OR_SHRINK",
+          "invariants": [
+            "COV-01",
+            "COV-02",
+            "COV-03",
+            "COV-04",
+            "COV-05",
+            "COV-06",
+            "COV-07",
+            "COV-08"
+          ]
+        }
+      },
+      "eventHash": "638593a7f9a6852cb54e4cfa668ed1835371ad5b323726d17048b626bc6c6856"
+    },
+    {
+      "eventId": "evt-0002",
+      "eventType": "MARKET_SNAPSHOT_RECORDED",
+      "payloadHash": "73be1b702738b6dedceb53a15700b7f5dc9f76a9164c0bce4a4bac8b37f178d6",
+      "previousEventHash": "638593a7f9a6852cb54e4cfa668ed1835371ad5b323726d17048b626bc6c6856",
+      "timestamp": "2026-08-31T14:30:00.000Z",
+      "codeRevision": "demo",
+      "actor": "alpha",
+      "payload": {
+        "market": {
+          "timestamp": "2026-08-31T14:30:00.000Z",
+          "feed": "indicative",
+          "underlying": "SPY",
+          "underlyingPrice": "561.20",
+          "contracts": {
+            "SPY260918C00560000": {
+              "symbol": "SPY260918C00560000",
+              "strike": "560.00",
+              "expiration": "2026-09-18",
+              "type": "call",
+              "bid": "5.00",
+              "ask": "5.20",
+              "bidSize": 40,
+              "askSize": 55,
+              "impliedVolatility": 0.17,
+              "delta": 0.42,
+              "openInterest": 1200,
+              "volume": 300,
+              "quoteTimestamp": "2026-08-31T14:30:00.000Z"
+            },
+            "SPY260918C00565000": {
+              "symbol": "SPY260918C00565000",
+              "strike": "565.00",
+              "expiration": "2026-09-18",
+              "type": "call",
+              "bid": "2.60",
+              "ask": "2.80",
+              "bidSize": 30,
+              "askSize": 35,
+              "impliedVolatility": 0.166,
+              "delta": 0.3,
+              "openInterest": 900,
+              "volume": 210,
+              "quoteTimestamp": "2026-08-31T14:30:00.000Z"
+            }
+          },
+          "clock": {
+            "isOpen": true,
+            "sessionDate": "2026-08-31",
+            "nextOpen": "2026-09-01T13:30:00.000Z",
+            "nextClose": "2026-08-31T20:00:00.000Z"
+          },
+          "snapshotHash": "3d63ae85d30bc42bdecc759335d20bd72828259a26d8af0f9268996fddf3b308"
+        }
+      },
+      "eventHash": "010c56ad92e43f35664ceba7f11e4d9cf98ad0b523a361b5b11d17b0887f8f9b"
+    },
+    {
+      "eventId": "evt-0003",
+      "eventType": "ACCOUNT_SNAPSHOT_RECORDED",
+      "payloadHash": "867111ae17e2e0330e17bfd6b825086bf4463b35c405dffffb9393ae92b7bee8",
+      "previousEventHash": "010c56ad92e43f35664ceba7f11e4d9cf98ad0b523a361b5b11d17b0887f8f9b",
+      "timestamp": "2026-08-31T14:30:00.000Z",
+      "codeRevision": "demo",
+      "actor": "alpha",
+      "payload": {
+        "account": {
+          "timestamp": "2026-08-31T14:30:00.000Z",
+          "accountId": "DEMO-PAPER-ACCOUNT",
+          "equity": "100000.00",
+          "cash": "100000.00",
+          "buyingPower": "100000.00",
+          "portfolioHeatPct": 0,
+          "dailyRealizedPnl": "0.00",
+          "dailyUnrealizedPnl": "0.00",
+          "optionsLevel": 3,
+          "status": "ACTIVE",
+          "dayPnlPct": 0,
+          "openPositions": [],
+          "tradingBlocked": false,
+          "snapshotHash": "3dff1c55976e3f77fde8f22453689d04344e41867e19fdd6dabfb582652fcde9"
+        }
+      },
+      "eventHash": "61171da430c3d29fbfa727aa92df47fb5420068ed0ffb336c1c9a7fed41e26a5"
+    },
+    {
+      "eventId": "evt-0004",
+      "eventType": "TRADE_INTENT_CREATED",
+      "payloadHash": "9d1d5c43af212e0c429a271311dc2bb37053fd07e6eea408d26ba13d3b94eb1b",
+      "previousEventHash": "61171da430c3d29fbfa727aa92df47fb5420068ed0ffb336c1c9a7fed41e26a5",
+      "timestamp": "2026-08-31T14:30:00.000Z",
+      "codeRevision": "demo",
+      "actor": "alpha",
+      "payload": {
+        "intent": {
+          "id": "demo-intent",
+          "policyId": "demo-policy",
+          "policyHash": "4a633e26dde0ffba6d21212bcfa05d10bc14aee066ba1f8f86a1d0c455933675",
+          "underlying": "SPY",
+          "structure": "BULL_CALL_DEBIT",
+          "legs": [
+            {
+              "symbol": "SPY260918C00560000",
+              "ratioQty": 1,
+              "side": "buy",
+              "positionIntent": "buy_to_open"
+            },
+            {
+              "symbol": "SPY260918C00565000",
+              "ratioQty": 1,
+              "side": "sell",
+              "positionIntent": "sell_to_open"
+            }
+          ],
+          "quantity": 1,
+          "limitPrice": "2.40",
+          "limitPriceBand": {
+            "min": "2.30",
+            "max": "2.50"
+          },
+          "timeInForce": "day",
+          "expiry": "2026-09-18",
+          "dte": 18,
+          "standaloneMaxLoss": "240.00",
+          "portfolioHeatAfterTrade": "240.00",
+          "alphaScore": 0.62,
+          "modelConfidenceMultiplier": 1,
+          "thesis": "SPY 560/565 call debit vertical: IV not rich, 5/20 trend up.",
+          "marketSnapshotHash": "3d63ae85d30bc42bdecc759335d20bd72828259a26d8af0f9268996fddf3b308",
+          "accountSnapshotHash": "3dff1c55976e3f77fde8f22453689d04344e41867e19fdd6dabfb582652fcde9",
+          "intentHash": "40c81a26babb6433ccf0b019de3540ea818ba747c3fde04225c217f0aca2cec3",
+          "createdAt": "2026-08-31T14:30:00.000Z",
+          "expiresAt": "2026-08-31T14:31:00.000Z"
+        }
+      },
+      "eventHash": "43aae1a4970c08a86b523583fb205e77f60c8fd9f9519ee9408a46f21aa81fc4"
+    },
+    {
+      "eventId": "evt-0005",
+      "eventType": "PERMIT_SIGNED",
+      "payloadHash": "3e8438752ec5785da904727942c6424de1fddcdd5d5b45117392bdab84686789",
+      "previousEventHash": "43aae1a4970c08a86b523583fb205e77f60c8fd9f9519ee9408a46f21aa81fc4",
+      "timestamp": "2026-08-31T14:30:00.000Z",
+      "codeRevision": "demo",
+      "actor": "safety-kernel",
+      "payload": {
+        "policy": {
+          "id": "demo-policy",
+          "version": 1,
+          "status": "ACTIVE",
+          "policyHash": "4a633e26dde0ffba6d21212bcfa05d10bc14aee066ba1f8f86a1d0c455933675",
+          "createdAt": "2026-08-30T09:00:00.000Z",
+          "activatedAt": "2026-08-30T09:05:00.000Z",
+          "plainEnglishEcho": "Grow steadily. Never risk more than 0.6% on a trade or 2.5% of the book. Defined-risk options only. Stop for the day at -1.25%.",
+          "allowedUnderlyings": [
+            "SPY",
+            "QQQ"
+          ],
+          "allowedStructures": [
+            "BULL_CALL_DEBIT",
+            "BEAR_PUT_DEBIT",
+            "CREDIT_VERTICAL"
+          ],
+          "riskProfile": "BALANCED",
+          "perTradeMaxLossPct": 0.6,
+          "portfolioHeatMaxLossPct": 2.5,
+          "dailyHaltPct": -1.25,
+          "minDte": 7,
+          "maxDte": 21,
+          "minDelta": 0.15,
+          "maxDelta": 0.45,
+          "maxQuoteAgeMs": 5000,
+          "maxBidAskWidthPct": 8,
+          "minOpenInterest": 250,
+          "minVolume": 50,
+          "duplicateExposureCooldownMinutes": 120,
+          "exitAttemptDeadlineMinutes": 60,
+          "missingStateAction": "ABSTAIN",
+          "modelAuthority": "VETO_OR_SHRINK",
+          "invariants": [
+            "COV-01",
+            "COV-02",
+            "COV-03",
+            "COV-04",
+            "COV-05",
+            "COV-06",
+            "COV-07",
+            "COV-08"
+          ]
+        },
+        "intent": {
+          "id": "demo-intent",
+          "policyId": "demo-policy",
+          "policyHash": "4a633e26dde0ffba6d21212bcfa05d10bc14aee066ba1f8f86a1d0c455933675",
+          "underlying": "SPY",
+          "structure": "BULL_CALL_DEBIT",
+          "legs": [
+            {
+              "symbol": "SPY260918C00560000",
+              "ratioQty": 1,
+              "side": "buy",
+              "positionIntent": "buy_to_open"
+            },
+            {
+              "symbol": "SPY260918C00565000",
+              "ratioQty": 1,
+              "side": "sell",
+              "positionIntent": "sell_to_open"
+            }
+          ],
+          "quantity": 1,
+          "limitPrice": "2.40",
+          "limitPriceBand": {
+            "min": "2.30",
+            "max": "2.50"
+          },
+          "timeInForce": "day",
+          "expiry": "2026-09-18",
+          "dte": 18,
+          "standaloneMaxLoss": "240.00",
+          "portfolioHeatAfterTrade": "240.00",
+          "alphaScore": 0.62,
+          "modelConfidenceMultiplier": 1,
+          "thesis": "SPY 560/565 call debit vertical: IV not rich, 5/20 trend up.",
+          "marketSnapshotHash": "3d63ae85d30bc42bdecc759335d20bd72828259a26d8af0f9268996fddf3b308",
+          "accountSnapshotHash": "3dff1c55976e3f77fde8f22453689d04344e41867e19fdd6dabfb582652fcde9",
+          "intentHash": "40c81a26babb6433ccf0b019de3540ea818ba747c3fde04225c217f0aca2cec3",
+          "createdAt": "2026-08-31T14:30:00.000Z",
+          "expiresAt": "2026-08-31T14:31:00.000Z"
+        },
+        "finalIntent": {
+          "id": "demo-intent",
+          "policyId": "demo-policy",
+          "policyHash": "4a633e26dde0ffba6d21212bcfa05d10bc14aee066ba1f8f86a1d0c455933675",
+          "underlying": "SPY",
+          "structure": "BULL_CALL_DEBIT",
+          "legs": [
+            {
+              "symbol": "SPY260918C00560000",
+              "ratioQty": 1,
+              "side": "buy",
+              "positionIntent": "buy_to_open"
+            },
+            {
+              "symbol": "SPY260918C00565000",
+              "ratioQty": 1,
+              "side": "sell",
+              "positionIntent": "sell_to_open"
+            }
+          ],
+          "quantity": 1,
+          "limitPrice": "2.40",
+          "limitPriceBand": {
+            "min": "2.30",
+            "max": "2.50"
+          },
+          "timeInForce": "day",
+          "expiry": "2026-09-18",
+          "dte": 18,
+          "standaloneMaxLoss": "240.00",
+          "portfolioHeatAfterTrade": "240.00",
+          "alphaScore": 0.62,
+          "modelConfidenceMultiplier": 1,
+          "thesis": "SPY 560/565 call debit vertical: IV not rich, 5/20 trend up.",
+          "marketSnapshotHash": "3d63ae85d30bc42bdecc759335d20bd72828259a26d8af0f9268996fddf3b308",
+          "accountSnapshotHash": "3dff1c55976e3f77fde8f22453689d04344e41867e19fdd6dabfb582652fcde9",
+          "intentHash": "40c81a26babb6433ccf0b019de3540ea818ba747c3fde04225c217f0aca2cec3",
+          "createdAt": "2026-08-31T14:30:00.000Z",
+          "expiresAt": "2026-08-31T14:31:00.000Z"
+        },
+        "account": {
+          "timestamp": "2026-08-31T14:30:00.000Z",
+          "accountId": "DEMO-PAPER-ACCOUNT",
+          "equity": "100000.00",
+          "cash": "100000.00",
+          "buyingPower": "100000.00",
+          "portfolioHeatPct": 0,
+          "dailyRealizedPnl": "0.00",
+          "dailyUnrealizedPnl": "0.00",
+          "optionsLevel": 3,
+          "status": "ACTIVE",
+          "dayPnlPct": 0,
+          "openPositions": [],
+          "tradingBlocked": false,
+          "snapshotHash": "3dff1c55976e3f77fde8f22453689d04344e41867e19fdd6dabfb582652fcde9"
+        },
+        "market": {
+          "timestamp": "2026-08-31T14:30:00.000Z",
+          "feed": "indicative",
+          "underlying": "SPY",
+          "underlyingPrice": "561.20",
+          "contracts": {
+            "SPY260918C00560000": {
+              "symbol": "SPY260918C00560000",
+              "strike": "560.00",
+              "expiration": "2026-09-18",
+              "type": "call",
+              "bid": "5.00",
+              "ask": "5.20",
+              "bidSize": 40,
+              "askSize": 55,
+              "impliedVolatility": 0.17,
+              "delta": 0.42,
+              "openInterest": 1200,
+              "volume": 300,
+              "quoteTimestamp": "2026-08-31T14:30:00.000Z"
+            },
+            "SPY260918C00565000": {
+              "symbol": "SPY260918C00565000",
+              "strike": "565.00",
+              "expiration": "2026-09-18",
+              "type": "call",
+              "bid": "2.60",
+              "ask": "2.80",
+              "bidSize": 30,
+              "askSize": 35,
+              "impliedVolatility": 0.166,
+              "delta": 0.3,
+              "openInterest": 900,
+              "volume": 210,
+              "quoteTimestamp": "2026-08-31T14:30:00.000Z"
+            }
+          },
+          "clock": {
+            "isOpen": true,
+            "sessionDate": "2026-08-31",
+            "nextOpen": "2026-09-01T13:30:00.000Z",
+            "nextClose": "2026-08-31T20:00:00.000Z"
+          },
+          "snapshotHash": "3d63ae85d30bc42bdecc759335d20bd72828259a26d8af0f9268996fddf3b308"
+        },
+        "session": {
+          "state": "ACTIVE",
+          "sessionDate": "2026-08-31",
+          "haltedAt": null,
+          "haltReason": null
+        },
+        "now": "2026-08-31T14:30:00.000Z",
+        "decision": "APPROVE",
+        "failedInvariants": [],
+        "reason": "All invariants satisfied.",
+        "permit": {
+          "policyId": "demo-policy",
+          "policyVersion": 1,
+          "policyHash": "4a633e26dde0ffba6d21212bcfa05d10bc14aee066ba1f8f86a1d0c455933675",
+          "intentHash": "40c81a26babb6433ccf0b019de3540ea818ba747c3fde04225c217f0aca2cec3",
+          "accountSnapshotHash": "3dff1c55976e3f77fde8f22453689d04344e41867e19fdd6dabfb582652fcde9",
+          "marketSnapshotHash": "3d63ae85d30bc42bdecc759335d20bd72828259a26d8af0f9268996fddf3b308",
+          "exactLegs": [
+            {
+              "symbol": "SPY260918C00560000",
+              "ratioQty": 1,
+              "side": "buy",
+              "positionIntent": "buy_to_open"
+            },
+            {
+              "symbol": "SPY260918C00565000",
+              "ratioQty": 1,
+              "side": "sell",
+              "positionIntent": "sell_to_open"
+            }
+          ],
+          "maxQuantity": 1,
+          "limitPriceBand": {
+            "min": "2.30",
+            "max": "2.50"
+          },
+          "permitId": "d55294ed-f75b-4691-94ec-a1738bc624be",
+          "nonce": "covenant-paper:907979987dce8b37ec13c1e60af000f7",
+          "createdAt": "2026-08-31T14:30:00.000Z",
+          "expiresAt": "2026-08-31T14:31:00.000Z",
+          "signingKeyId": "1fc2cf5735e3bd4b",
+          "signature": "05OsbfRoRPOmilJM7J2d7OPP0JPBtMhi4tpgiQYlusxHJg7Qv7SJ0SHAFy+pVAETZfz7g44AK60eKOtW6utZBg=="
+        }
+      },
+      "eventHash": "55202a405ed9e129fdb1489b188b76b67822fb1b2a8aba751f39bb3e2ca23629"
+    },
+    {
+      "eventId": "evt-0006",
+      "eventType": "ORDER_SUBMITTED",
+      "payloadHash": "ee4be752a62c22732d787604d5bb132bf422c70dc467baf1239df1ad1af4ee52",
+      "previousEventHash": "55202a405ed9e129fdb1489b188b76b67822fb1b2a8aba751f39bb3e2ca23629",
+      "timestamp": "2026-08-31T14:30:00.000Z",
+      "codeRevision": "demo",
+      "actor": "permit-executor",
+      "payload": {
+        "permit": {
+          "policyId": "demo-policy",
+          "policyVersion": 1,
+          "policyHash": "4a633e26dde0ffba6d21212bcfa05d10bc14aee066ba1f8f86a1d0c455933675",
+          "intentHash": "40c81a26babb6433ccf0b019de3540ea818ba747c3fde04225c217f0aca2cec3",
+          "accountSnapshotHash": "3dff1c55976e3f77fde8f22453689d04344e41867e19fdd6dabfb582652fcde9",
+          "marketSnapshotHash": "3d63ae85d30bc42bdecc759335d20bd72828259a26d8af0f9268996fddf3b308",
+          "exactLegs": [
+            {
+              "symbol": "SPY260918C00560000",
+              "ratioQty": 1,
+              "side": "buy",
+              "positionIntent": "buy_to_open"
+            },
+            {
+              "symbol": "SPY260918C00565000",
+              "ratioQty": 1,
+              "side": "sell",
+              "positionIntent": "sell_to_open"
+            }
+          ],
+          "maxQuantity": 1,
+          "limitPriceBand": {
+            "min": "2.30",
+            "max": "2.50"
+          },
+          "permitId": "d55294ed-f75b-4691-94ec-a1738bc624be",
+          "nonce": "covenant-paper:907979987dce8b37ec13c1e60af000f7",
+          "createdAt": "2026-08-31T14:30:00.000Z",
+          "expiresAt": "2026-08-31T14:31:00.000Z",
+          "signingKeyId": "1fc2cf5735e3bd4b",
+          "signature": "05OsbfRoRPOmilJM7J2d7OPP0JPBtMhi4tpgiQYlusxHJg7Qv7SJ0SHAFy+pVAETZfz7g44AK60eKOtW6utZBg=="
+        },
+        "intent": {
+          "id": "demo-intent",
+          "policyId": "demo-policy",
+          "policyHash": "4a633e26dde0ffba6d21212bcfa05d10bc14aee066ba1f8f86a1d0c455933675",
+          "underlying": "SPY",
+          "structure": "BULL_CALL_DEBIT",
+          "legs": [
+            {
+              "symbol": "SPY260918C00560000",
+              "ratioQty": 1,
+              "side": "buy",
+              "positionIntent": "buy_to_open"
+            },
+            {
+              "symbol": "SPY260918C00565000",
+              "ratioQty": 1,
+              "side": "sell",
+              "positionIntent": "sell_to_open"
+            }
+          ],
+          "quantity": 1,
+          "limitPrice": "2.40",
+          "limitPriceBand": {
+            "min": "2.30",
+            "max": "2.50"
+          },
+          "timeInForce": "day",
+          "expiry": "2026-09-18",
+          "dte": 18,
+          "standaloneMaxLoss": "240.00",
+          "portfolioHeatAfterTrade": "240.00",
+          "alphaScore": 0.62,
+          "modelConfidenceMultiplier": 1,
+          "thesis": "SPY 560/565 call debit vertical: IV not rich, 5/20 trend up.",
+          "marketSnapshotHash": "3d63ae85d30bc42bdecc759335d20bd72828259a26d8af0f9268996fddf3b308",
+          "accountSnapshotHash": "3dff1c55976e3f77fde8f22453689d04344e41867e19fdd6dabfb582652fcde9",
+          "intentHash": "40c81a26babb6433ccf0b019de3540ea818ba747c3fde04225c217f0aca2cec3",
+          "createdAt": "2026-08-31T14:30:00.000Z",
+          "expiresAt": "2026-08-31T14:31:00.000Z"
+        },
+        "order": {
+          "order_class": "mleg",
+          "qty": "1",
+          "type": "limit",
+          "limit_price": "2.40",
+          "time_in_force": "day",
+          "client_order_id": "cov_907979987dce8b37ec13c1e60af000f7",
+          "legs": [
+            {
+              "symbol": "SPY260918C00560000",
+              "ratio_qty": "1",
+              "side": "buy",
+              "position_intent": "buy_to_open"
+            },
+            {
+              "symbol": "SPY260918C00565000",
+              "ratio_qty": "1",
+              "side": "sell",
+              "position_intent": "sell_to_open"
+            }
+          ]
+        },
+        "orderId": "demo-order-1",
+        "requestId": "demo-req-1",
+        "transport": "RECORDING — no live broker call in this manifest"
+      },
+      "eventHash": "6d3fd754310b901419737a8bff02f6a850a3546a44a5b155a48e67b78f93c65b"
+    },
+    {
+      "eventId": "evt-0007",
+      "eventType": "ORDER_ACCEPTED",
+      "payloadHash": "2dd186b5209796f023e46dfd417680e607f991e21b99dea61977ef9c310558ce",
+      "previousEventHash": "6d3fd754310b901419737a8bff02f6a850a3546a44a5b155a48e67b78f93c65b",
+      "timestamp": "2026-08-31T14:30:00.000Z",
+      "codeRevision": "demo",
+      "actor": "permit-executor",
+      "payload": {
+        "orderId": "demo-order-1"
+      },
+      "eventHash": "9cff4040c62c56eeb426df667378f84f31b8f83f03415175684f63f3ad080b03"
+    },
+    {
+      "eventId": "evt-0008",
+      "eventType": "PERMIT_REPLAY_REJECTED",
+      "payloadHash": "d644fba5ecf8e66cb36a02d72d1d8065d28d2c2cd951a110a978398318f7b834",
+      "previousEventHash": "9cff4040c62c56eeb426df667378f84f31b8f83f03415175684f63f3ad080b03",
+      "timestamp": "2026-08-31T14:30:00.000Z",
+      "codeRevision": "demo",
+      "actor": "permit-executor",
+      "payload": {
+        "permitId": "d55294ed-f75b-4691-94ec-a1738bc624be",
+        "code": "NONCE_REPLAYED",
+        "reason": "Permit nonce has already been spent. Replay rejected."
+      },
+      "eventHash": "22e7c11378744bb2c092d9ceb411e2ac9917473b4bd255ebfc2cd975a6342c71"
+    },
+    {
+      "eventId": "evt-0009",
+      "eventType": "PERMIT_SIGNED",
+      "payloadHash": "7684e5f116668e533588f411520380cdcfc00251a20fd39a7ac22ca122ded4df",
+      "previousEventHash": "22e7c11378744bb2c092d9ceb411e2ac9917473b4bd255ebfc2cd975a6342c71",
+      "timestamp": "2026-08-31T14:30:00.000Z",
+      "codeRevision": "demo",
+      "actor": "safety-kernel",
+      "payload": {
+        "policy": {
+          "id": "demo-policy",
+          "version": 1,
+          "status": "ACTIVE",
+          "policyHash": "4a633e26dde0ffba6d21212bcfa05d10bc14aee066ba1f8f86a1d0c455933675",
+          "createdAt": "2026-08-30T09:00:00.000Z",
+          "activatedAt": "2026-08-30T09:05:00.000Z",
+          "plainEnglishEcho": "Grow steadily. Never risk more than 0.6% on a trade or 2.5% of the book. Defined-risk options only. Stop for the day at -1.25%.",
+          "allowedUnderlyings": [
+            "SPY",
+            "QQQ"
+          ],
+          "allowedStructures": [
+            "BULL_CALL_DEBIT",
+            "BEAR_PUT_DEBIT",
+            "CREDIT_VERTICAL"
+          ],
+          "riskProfile": "BALANCED",
+          "perTradeMaxLossPct": 0.6,
+          "portfolioHeatMaxLossPct": 2.5,
+          "dailyHaltPct": -1.25,
+          "minDte": 7,
+          "maxDte": 21,
+          "minDelta": 0.15,
+          "maxDelta": 0.45,
+          "maxQuoteAgeMs": 5000,
+          "maxBidAskWidthPct": 8,
+          "minOpenInterest": 250,
+          "minVolume": 50,
+          "duplicateExposureCooldownMinutes": 120,
+          "exitAttemptDeadlineMinutes": 60,
+          "missingStateAction": "ABSTAIN",
+          "modelAuthority": "VETO_OR_SHRINK",
+          "invariants": [
+            "COV-01",
+            "COV-02",
+            "COV-03",
+            "COV-04",
+            "COV-05",
+            "COV-06",
+            "COV-07",
+            "COV-08"
+          ]
+        },
+        "intent": {
+          "id": "demo-intent-oversized",
+          "policyId": "demo-policy",
+          "policyHash": "4a633e26dde0ffba6d21212bcfa05d10bc14aee066ba1f8f86a1d0c455933675",
+          "underlying": "SPY",
+          "structure": "BULL_CALL_DEBIT",
+          "legs": [
+            {
+              "symbol": "SPY260918C00560000",
+              "ratioQty": 1,
+              "side": "buy",
+              "positionIntent": "buy_to_open"
+            },
+            {
+              "symbol": "SPY260918C00565000",
+              "ratioQty": 1,
+              "side": "sell",
+              "positionIntent": "sell_to_open"
+            }
+          ],
+          "quantity": 3,
+          "limitPrice": "2.40",
+          "limitPriceBand": {
+            "min": "2.30",
+            "max": "2.50"
+          },
+          "timeInForce": "day",
+          "expiry": "2026-09-18",
+          "dte": 18,
+          "standaloneMaxLoss": "720.00",
+          "portfolioHeatAfterTrade": "720.00",
+          "alphaScore": 0.62,
+          "modelConfidenceMultiplier": 1,
+          "thesis": "SPY 560/565 call debit vertical: IV not rich, 5/20 trend up.",
+          "marketSnapshotHash": "3d63ae85d30bc42bdecc759335d20bd72828259a26d8af0f9268996fddf3b308",
+          "accountSnapshotHash": "3dff1c55976e3f77fde8f22453689d04344e41867e19fdd6dabfb582652fcde9",
+          "intentHash": "581d362b9902b6a0054383072a5be945b7ecddf06d7ea5a5a400efce7ec5b4f4",
+          "createdAt": "2026-08-31T14:30:00.000Z",
+          "expiresAt": "2026-08-31T14:31:00.000Z"
+        },
+        "finalIntent": {
+          "id": "demo-intent-oversized",
+          "policyId": "demo-policy",
+          "policyHash": "4a633e26dde0ffba6d21212bcfa05d10bc14aee066ba1f8f86a1d0c455933675",
+          "underlying": "SPY",
+          "structure": "BULL_CALL_DEBIT",
+          "legs": [
+            {
+              "symbol": "SPY260918C00560000",
+              "ratioQty": 1,
+              "side": "buy",
+              "positionIntent": "buy_to_open"
+            },
+            {
+              "symbol": "SPY260918C00565000",
+              "ratioQty": 1,
+              "side": "sell",
+              "positionIntent": "sell_to_open"
+            }
+          ],
+          "quantity": 2,
+          "limitPrice": "2.40",
+          "limitPriceBand": {
+            "min": "2.30",
+            "max": "2.50"
+          },
+          "timeInForce": "day",
+          "expiry": "2026-09-18",
+          "dte": 18,
+          "standaloneMaxLoss": "480.00",
+          "portfolioHeatAfterTrade": "480.00",
+          "alphaScore": 0.62,
+          "modelConfidenceMultiplier": 1,
+          "thesis": "SPY 560/565 call debit vertical: IV not rich, 5/20 trend up.",
+          "marketSnapshotHash": "3d63ae85d30bc42bdecc759335d20bd72828259a26d8af0f9268996fddf3b308",
+          "accountSnapshotHash": "3dff1c55976e3f77fde8f22453689d04344e41867e19fdd6dabfb582652fcde9",
+          "intentHash": "0c625db7c5a34ee1e5445c219710ba28ffd25ba321351290ccbc5b9bdf0ad355",
+          "createdAt": "2026-08-31T14:30:00.000Z",
+          "expiresAt": "2026-08-31T14:31:00.000Z"
+        },
+        "account": {
+          "timestamp": "2026-08-31T14:30:00.000Z",
+          "accountId": "DEMO-PAPER-ACCOUNT",
+          "equity": "100000.00",
+          "cash": "100000.00",
+          "buyingPower": "100000.00",
+          "portfolioHeatPct": 0,
+          "dailyRealizedPnl": "0.00",
+          "dailyUnrealizedPnl": "0.00",
+          "optionsLevel": 3,
+          "status": "ACTIVE",
+          "dayPnlPct": 0,
+          "openPositions": [],
+          "tradingBlocked": false,
+          "snapshotHash": "3dff1c55976e3f77fde8f22453689d04344e41867e19fdd6dabfb582652fcde9"
+        },
+        "market": {
+          "timestamp": "2026-08-31T14:30:00.000Z",
+          "feed": "indicative",
+          "underlying": "SPY",
+          "underlyingPrice": "561.20",
+          "contracts": {
+            "SPY260918C00560000": {
+              "symbol": "SPY260918C00560000",
+              "strike": "560.00",
+              "expiration": "2026-09-18",
+              "type": "call",
+              "bid": "5.00",
+              "ask": "5.20",
+              "bidSize": 40,
+              "askSize": 55,
+              "impliedVolatility": 0.17,
+              "delta": 0.42,
+              "openInterest": 1200,
+              "volume": 300,
+              "quoteTimestamp": "2026-08-31T14:30:00.000Z"
+            },
+            "SPY260918C00565000": {
+              "symbol": "SPY260918C00565000",
+              "strike": "565.00",
+              "expiration": "2026-09-18",
+              "type": "call",
+              "bid": "2.60",
+              "ask": "2.80",
+              "bidSize": 30,
+              "askSize": 35,
+              "impliedVolatility": 0.166,
+              "delta": 0.3,
+              "openInterest": 900,
+              "volume": 210,
+              "quoteTimestamp": "2026-08-31T14:30:00.000Z"
+            }
+          },
+          "clock": {
+            "isOpen": true,
+            "sessionDate": "2026-08-31",
+            "nextOpen": "2026-09-01T13:30:00.000Z",
+            "nextClose": "2026-08-31T20:00:00.000Z"
+          },
+          "snapshotHash": "3d63ae85d30bc42bdecc759335d20bd72828259a26d8af0f9268996fddf3b308"
+        },
+        "session": {
+          "state": "ACTIVE",
+          "sessionDate": "2026-08-31",
+          "haltedAt": null,
+          "haltReason": null
+        },
+        "now": "2026-08-31T14:30:00.000Z",
+        "decision": "SHRINK",
+        "failedInvariants": [
+          "COV-02"
+        ],
+        "reason": "Max loss 720.00 exceeds the per-trade cap 600.00 (0.6% of equity). Shrinking to 2.",
+        "permit": {
+          "policyId": "demo-policy",
+          "policyVersion": 1,
+          "policyHash": "4a633e26dde0ffba6d21212bcfa05d10bc14aee066ba1f8f86a1d0c455933675",
+          "intentHash": "0c625db7c5a34ee1e5445c219710ba28ffd25ba321351290ccbc5b9bdf0ad355",
+          "accountSnapshotHash": "3dff1c55976e3f77fde8f22453689d04344e41867e19fdd6dabfb582652fcde9",
+          "marketSnapshotHash": "3d63ae85d30bc42bdecc759335d20bd72828259a26d8af0f9268996fddf3b308",
+          "exactLegs": [
+            {
+              "symbol": "SPY260918C00560000",
+              "ratioQty": 1,
+              "side": "buy",
+              "positionIntent": "buy_to_open"
+            },
+            {
+              "symbol": "SPY260918C00565000",
+              "ratioQty": 1,
+              "side": "sell",
+              "positionIntent": "sell_to_open"
+            }
+          ],
+          "maxQuantity": 2,
+          "limitPriceBand": {
+            "min": "2.30",
+            "max": "2.50"
+          },
+          "permitId": "28d8957f-8dbe-44c2-8b2b-1ac649ff490c",
+          "nonce": "covenant-paper:3eb6dfd19980dc4658b46b39a2eb6ddd",
+          "createdAt": "2026-08-31T14:30:00.000Z",
+          "expiresAt": "2026-08-31T14:31:00.000Z",
+          "signingKeyId": "1fc2cf5735e3bd4b",
+          "signature": "ao1uyAn8A/iGYYWsJh0KZrR7sL25z0icc0wN1MnM3bvjvCrIQ22R3YdwOJFVHrfQf/znlvpbJnnigAz/tWWlBg=="
+        },
+        "requestedQuantity": 3,
+        "grantedQuantity": 2
+      },
+      "eventHash": "baa99d73ca85c6c8c540dcf5e423f51cf38d307d8218f72b104dfda12e5d8038"
+    },
+    {
+      "eventId": "evt-0010",
+      "eventType": "KERNEL_REJECTED",
+      "payloadHash": "eb4cf339ba96a3b5262ae70d3fc6898a858e7c86d3f37187c65400e80f61aee7",
+      "previousEventHash": "baa99d73ca85c6c8c540dcf5e423f51cf38d307d8218f72b104dfda12e5d8038",
+      "timestamp": "2026-08-31T14:30:00.000Z",
+      "codeRevision": "demo",
+      "actor": "safety-kernel",
+      "payload": {
+        "policy": {
+          "id": "demo-policy",
+          "version": 1,
+          "status": "ACTIVE",
+          "policyHash": "4a633e26dde0ffba6d21212bcfa05d10bc14aee066ba1f8f86a1d0c455933675",
+          "createdAt": "2026-08-30T09:00:00.000Z",
+          "activatedAt": "2026-08-30T09:05:00.000Z",
+          "plainEnglishEcho": "Grow steadily. Never risk more than 0.6% on a trade or 2.5% of the book. Defined-risk options only. Stop for the day at -1.25%.",
+          "allowedUnderlyings": [
+            "SPY",
+            "QQQ"
+          ],
+          "allowedStructures": [
+            "BULL_CALL_DEBIT",
+            "BEAR_PUT_DEBIT",
+            "CREDIT_VERTICAL"
+          ],
+          "riskProfile": "BALANCED",
+          "perTradeMaxLossPct": 0.6,
+          "portfolioHeatMaxLossPct": 2.5,
+          "dailyHaltPct": -1.25,
+          "minDte": 7,
+          "maxDte": 21,
+          "minDelta": 0.15,
+          "maxDelta": 0.45,
+          "maxQuoteAgeMs": 5000,
+          "maxBidAskWidthPct": 8,
+          "minOpenInterest": 250,
+          "minVolume": 50,
+          "duplicateExposureCooldownMinutes": 120,
+          "exitAttemptDeadlineMinutes": 60,
+          "missingStateAction": "ABSTAIN",
+          "modelAuthority": "VETO_OR_SHRINK",
+          "invariants": [
+            "COV-01",
+            "COV-02",
+            "COV-03",
+            "COV-04",
+            "COV-05",
+            "COV-06",
+            "COV-07",
+            "COV-08"
+          ]
+        },
+        "intent": {
+          "id": "demo-intent-halted",
+          "policyId": "demo-policy",
+          "policyHash": "4a633e26dde0ffba6d21212bcfa05d10bc14aee066ba1f8f86a1d0c455933675",
+          "underlying": "SPY",
+          "structure": "BULL_CALL_DEBIT",
+          "legs": [
+            {
+              "symbol": "SPY260918C00560000",
+              "ratioQty": 1,
+              "side": "buy",
+              "positionIntent": "buy_to_open"
+            },
+            {
+              "symbol": "SPY260918C00565000",
+              "ratioQty": 1,
+              "side": "sell",
+              "positionIntent": "sell_to_open"
+            }
+          ],
+          "quantity": 1,
+          "limitPrice": "2.40",
+          "limitPriceBand": {
+            "min": "2.30",
+            "max": "2.50"
+          },
+          "timeInForce": "day",
+          "expiry": "2026-09-18",
+          "dte": 18,
+          "standaloneMaxLoss": "240.00",
+          "portfolioHeatAfterTrade": "240.00",
+          "alphaScore": 0.62,
+          "modelConfidenceMultiplier": 1,
+          "thesis": "SPY 560/565 call debit vertical: IV not rich, 5/20 trend up.",
+          "marketSnapshotHash": "3d63ae85d30bc42bdecc759335d20bd72828259a26d8af0f9268996fddf3b308",
+          "accountSnapshotHash": "01400b7890b1a9fc66be323a73842d84988367e2d44d98b05b169704659e12be",
+          "intentHash": "66d051619323b2ecf74a776eff7254d0e31528d912eb5aa78ff4b50efd541e59",
+          "createdAt": "2026-08-31T14:30:00.000Z",
+          "expiresAt": "2026-08-31T14:31:00.000Z"
+        },
+        "account": {
+          "timestamp": "2026-08-31T14:30:00.000Z",
+          "accountId": "DEMO-PAPER-ACCOUNT",
+          "equity": "100000.00",
+          "cash": "100000.00",
+          "buyingPower": "100000.00",
+          "portfolioHeatPct": 0,
+          "dailyRealizedPnl": "0.00",
+          "dailyUnrealizedPnl": "-1400.00",
+          "optionsLevel": 3,
+          "status": "ACTIVE",
+          "dayPnlPct": -1.4,
+          "openPositions": [],
+          "tradingBlocked": false,
+          "snapshotHash": "01400b7890b1a9fc66be323a73842d84988367e2d44d98b05b169704659e12be"
+        },
+        "market": {
+          "timestamp": "2026-08-31T14:30:00.000Z",
+          "feed": "indicative",
+          "underlying": "SPY",
+          "underlyingPrice": "561.20",
+          "contracts": {
+            "SPY260918C00560000": {
+              "symbol": "SPY260918C00560000",
+              "strike": "560.00",
+              "expiration": "2026-09-18",
+              "type": "call",
+              "bid": "5.00",
+              "ask": "5.20",
+              "bidSize": 40,
+              "askSize": 55,
+              "impliedVolatility": 0.17,
+              "delta": 0.42,
+              "openInterest": 1200,
+              "volume": 300,
+              "quoteTimestamp": "2026-08-31T14:30:00.000Z"
+            },
+            "SPY260918C00565000": {
+              "symbol": "SPY260918C00565000",
+              "strike": "565.00",
+              "expiration": "2026-09-18",
+              "type": "call",
+              "bid": "2.60",
+              "ask": "2.80",
+              "bidSize": 30,
+              "askSize": 35,
+              "impliedVolatility": 0.166,
+              "delta": 0.3,
+              "openInterest": 900,
+              "volume": 210,
+              "quoteTimestamp": "2026-08-31T14:30:00.000Z"
+            }
+          },
+          "clock": {
+            "isOpen": true,
+            "sessionDate": "2026-08-31",
+            "nextOpen": "2026-09-01T13:30:00.000Z",
+            "nextClose": "2026-08-31T20:00:00.000Z"
+          },
+          "snapshotHash": "3d63ae85d30bc42bdecc759335d20bd72828259a26d8af0f9268996fddf3b308"
+        },
+        "session": {
+          "state": "ACTIVE",
+          "sessionDate": "2026-08-31",
+          "haltedAt": null,
+          "haltReason": null
+        },
+        "now": "2026-08-31T14:30:00.000Z",
+        "decision": "VETO",
+        "failedInvariants": [
+          "COV-04"
+        ],
+        "reason": "Daily loss -1.40% has breached the mandate limit of -1.25%. Halting entries for the session."
+      },
+      "eventHash": "d82e9a82607602044f1154f62b6c70398f40c08ead646026cbf3825613cc50bf"
+    },
+    {
+      "eventId": "evt-0011",
+      "eventType": "HALT_TRIGGERED",
+      "payloadHash": "0b24ac24fe52c22967d4eb17402d85a4d5ce86cbea682f46ce04085cc50e0363",
+      "previousEventHash": "d82e9a82607602044f1154f62b6c70398f40c08ead646026cbf3825613cc50bf",
+      "timestamp": "2026-08-31T14:30:00.000Z",
+      "codeRevision": "demo",
+      "actor": "safety-kernel",
+      "payload": {
+        "reason": "Daily loss -1.40% has breached the mandate limit of -1.25%. Halting entries for the session."
+      },
+      "eventHash": "7957d47f5627ab2c491bb6965d8b626e5a14b51f6006c9b68e8d2a5271a49285"
+    }
+  ],
+  "headEventHash": "7957d47f5627ab2c491bb6965d8b626e5a14b51f6006c9b68e8d2a5271a49285"
+}

@@ -14,8 +14,8 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const designSource = readFileSync(resolve(process.cwd(), "DESIGN.md"), "utf8");
-const cssSource = readFileSync(resolve(process.cwd(), "app/globals.css"), "utf8");
+const designSource = readFileSync(resolve(process.cwd(), "DESIGN.md"), "utf8").replace(/\r\n/g, "\n");
+const cssSource = readFileSync(resolve(process.cwd(), "app/globals.css"), "utf8").replace(/\r\n/g, "\n");
 
 /** Minimal front-matter reader. Deliberately dependency-free. */
 function frontMatter(source: string): string {

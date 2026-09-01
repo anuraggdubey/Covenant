@@ -1,37 +1,34 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const NAV_ROUTES = [
+const PRIMARY_ROUTES = [
   { label: "Overview", path: "/" },
-  { label: "Candidate Lab", path: "/candidates" },
-  { label: "Mandate Studio", path: "/mandates" },
+  { label: "Candidates", path: "/candidates" },
+  { label: "Mandates", path: "/mandates" },
   { label: "Break Me", path: "/break-me" },
-  { label: "Permit Console", path: "/permits" },
-  { label: "Execution", path: "/execution" },
-  { label: "Proof Explorer", path: "/proof" },
-  { label: "Shadow Ledger", path: "/shadow-ledger" },
 ];
 
-/**
- * The mark: a ring with a gap. A boundary that is deliberately not closed —
- * the agent can act, but only through the opening. Cheaper than a logo and it
- * actually means something.
- */
+const SECONDARY_ROUTES = [
+  { label: "Permits", path: "/permits" },
+  { label: "Execution", path: "/execution" },
+  { label: "Proof", path: "/proof" },
+  { label: "Shadow", path: "/shadow-ledger" },
+];
+
 function Mark() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-      <circle
-        cx="9"
-        cy="9"
-        r="7"
+    <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" className="brand-mark">
+      <rect x="2.5" y="2.5" width="23" height="23" rx="7" fill="var(--accent)" />
+      <path
+        d="M9 14.4 12.2 17.6 19.4 10.4"
         fill="none"
-        stroke="var(--accent)"
-        strokeWidth="2"
+        stroke="var(--surface)"
+        strokeWidth="2.4"
         strokeLinecap="round"
-        strokeDasharray="33 11"
-        transform="rotate(-45 9 9)"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -39,40 +36,75 @@ function Mark() {
 
 export function Navigation() {
   const pathname = usePathname();
+  const [health, setHealth] = useState<{ connected: boolean; mode: string } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/health")
+      .then((response) => response.json())
+      .then((data) => {
+        setHealth({
+          connected: data?.alpaca?.connected ?? false,
+          mode: data?.mode ?? "PAPER_TRADING",
+        });
+      })
+      .catch(() => setHealth(null));
+  }, []);
 
   return (
-    <nav className="top-nav">
-      <Link
-        href="/"
-        style={{ display: "flex", alignItems: "center", gap: 8, flex: "none" }}
-        aria-label="Covenant home"
-      >
-        <Mark />
-        <span style={{ fontWeight: 650, fontSize: "0.9375rem", letterSpacing: "-0.01em" }}>
-          Covenant
+    <header className="site-header">
+      <div className="site-announcement">
+        <span className="announcement-track">
+          Paper trading only / Proof-carrying vertical spreads / Signed permits / Replayable decisions
         </span>
-      </Link>
-
-      <div className="nav-links">
-        {NAV_ROUTES.map((route) => {
-          const isActive = pathname === route.path;
-          return (
-            <Link
-              key={route.path}
-              href={route.path}
-              className={`nav-item ${isActive ? "active" : ""}`}
-              aria-current={isActive ? "page" : undefined}
-            >
-              {route.label}
-            </Link>
-          );
-        })}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flex: "none" }}>
-        <span className="badge badge-cyan">Paper only</span>
-        <span className="badge badge-amber">Account unverified</span>
-      </div>
-    </nav>
+      <nav className="top-nav" aria-label="Main navigation">
+        <Link href="/" className="brand-link" aria-label="Covenant home">
+          <Mark />
+          <span>Covenant</span>
+        </Link>
+
+        <div className="nav-center" aria-label="Core product areas">
+          {PRIMARY_ROUTES.map((route) => {
+            const isActive = pathname === route.path;
+            return (
+              <Link
+                key={route.path}
+                href={route.path}
+                className={`nav-item ${isActive ? "active" : ""}`}
+                aria-current={isActive ? "page" : undefined}
+              >
+                {route.label}
+              </Link>
+            );
+          })}
+        </div>
+
+        <div className="nav-actions">
+          <div className="nav-more" aria-label="Audit tools">
+            {SECONDARY_ROUTES.map((route) => {
+              const isActive = pathname === route.path;
+              return (
+                <Link
+                  key={route.path}
+                  href={route.path}
+                  className={`nav-item compact ${isActive ? "active" : ""}`}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  {route.label}
+                </Link>
+              );
+            })}
+          </div>
+          <span className="nav-status">
+            <span className={health?.connected ? "status-light connected" : "status-light"} />
+            {health?.connected ? "Connected" : health?.mode ?? "Paper mode"}
+          </span>
+          <Link href="/mandates" className="nav-cta">
+            Start
+          </Link>
+        </div>
+      </nav>
+    </header>
   );
 }

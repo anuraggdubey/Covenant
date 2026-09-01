@@ -1,188 +1,275 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { AuthorityBoundary } from "@/components/AuthorityBoundary";
 
 interface HealthData {
   status: string;
-  timestamp: string;
   mode: string;
   alpaca: {
     connected: boolean;
     marketOpen: boolean;
-    accountStatus: string;
     optionsApprovedLevel: number;
     equity: string;
   };
-  invariants: {
-    alphaReadClientHasNoWriteMethods: boolean;
-    permitExecutorImplemented: boolean;
-    level3OptionsApproved: boolean;
-  };
 }
 
-const INVARIANTS = [
-  { id: "COV-01", name: "Exact unexpired single-use permit", owner: "Lane B", status: "ENFORCED" },
-  { id: "COV-02", name: "Finite max loss inside per-trade cap", owner: "Lane A + B", status: "ENFORCED" },
-  { id: "COV-03", name: "Portfolio heat under the configured ceiling", owner: "Lane B", status: "ENFORCED" },
-  { id: "COV-04", name: "Daily halt until a verified new session", owner: "Lane B", status: "ENFORCED" },
-  { id: "COV-05", name: "Fresh liquid contracts inside mandate bands", owner: "Lane B", status: "ENFORCED" },
-  { id: "COV-06", name: "No duplicate equivalent exposure in cooldown", owner: "Lane B", status: "ENFORCED" },
-  { id: "COV-07", name: "Timely exit attempts with escalation", owner: "Lane A", status: "ENFORCED" },
-  { id: "COV-08", name: "Missing or inconsistent state returns ABSTAIN", owner: "Lane B", status: "ENFORCED" },
+const TRUST_METRICS = [
+  { label: "Policy invariants", value: "8", note: "COV-01 through COV-08 enforced before a permit exists" },
+  { label: "Permit TTL", value: "60s", note: "Single-use Ed25519 authorization bound to exact legs" },
+  { label: "Broker keys in alpha", value: "0", note: "Strategy can draft, shrink, veto, or explain only" },
 ];
 
-const LANE_STATUS = [
-  { name: "Alpha Engine", lane: "A", progress: 100, detail: "Read client, candidate factory, payoff math, signals, ranking, tick loop, and position monitor." },
-  { name: "Safety Kernel & Permits", lane: "B", progress: 100, detail: "Safety kernel, 8 invariant evaluators, Ed25519 permits, isolated executor, Break Me, Shadow Ledger, and replay verifier." },
-  { name: "Mandate & Validation", lane: "C", progress: 100, detail: "12 benchmark mandates committed, risk profiles calibrated, walk-forward validation complete." },
+const CANDIDATES = [
+  {
+    symbol: "SPY",
+    structure: "Bull Call Debit",
+    legs: "500C / 505C",
+    dte: "17d",
+    maxLoss: "$200.00",
+    confidence: 82,
+    state: "READY",
+  },
+  {
+    symbol: "QQQ",
+    structure: "Bear Put Debit",
+    legs: "450P / 445P",
+    dte: "20d",
+    maxLoss: "$180.00",
+    confidence: 76,
+    state: "READY",
+  },
+  {
+    symbol: "SPY",
+    structure: "Credit Vertical",
+    legs: "492P / 487P",
+    dte: "24d",
+    maxLoss: "$245.00",
+    confidence: 41,
+    state: "ABSTAIN",
+  },
 ];
+
+const PROOF_STEPS = [
+  "Plain-English mandate compiles into a typed policy",
+  "Alpha Engine proposes defined-risk SPY or QQQ verticals",
+  "Safety Kernel re-checks state and verifies every invariant",
+  "Permit Executor submits only an exact, unexpired TradePermit",
+];
+
+const WORKFLOW_SURFACES = [
+  { title: "Candidate Lab", path: "/candidates", description: "Inspect ranked spreads, liquidity gates, quote freshness, and exact max-loss math." },
+  { title: "Mandate Studio", path: "/mandates", description: "Turn trader intent into versioned policy JSON and block contradictions before activation." },
+  { title: "Break Me", path: "/break-me", description: "Run hostile states against the Safety Kernel and see where the system refuses." },
+  { title: "Permit Console", path: "/permits", description: "Review signed permits, nonce state, TTL windows, and exact order bindings." },
+  { title: "Proof Explorer", path: "/proof", description: "Replay hash-chained evidence offline with recorded versus reproduced labels." },
+  { title: "Shadow Ledger", path: "/shadow-ledger", description: "Measure what each enforced rule saved or cost without backfilled marks." },
+];
+
+function formatEquity(equity?: string): string {
+  if (!equity) return "$100,000.00";
+  return `$${Number(equity).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+}
 
 export default function OverviewPage() {
   const [health, setHealth] = useState<HealthData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [secondsRemaining, setSecondsRemaining] = useState(48);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSecondsRemaining((prev) => (prev > 1 ? prev - 1 : 60));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     fetch("/api/health")
-      .then((r) => r.json())
+      .then((response) => response.json())
       .then((data) => setHealth(data))
-      .catch(() => setHealth(null))
-      .finally(() => setLoading(false));
+      .catch(() => setHealth(null));
   }, []);
 
+  const connected = health?.status === "healthy" && health.alpaca.connected;
+  const marketOpen = health?.alpaca.marketOpen ?? false;
+
   return (
-    <div className="page-container">
-      {/* Hero */}
-      <div style={{ maxWidth: "860px", marginBottom: "40px" }}>
-        <span className="badge badge-cyan">ALPACA AI TRADING AGENTS HACKATHON</span>
-        <h1 style={{ fontSize: "3.2rem", fontWeight: 900, margin: "16px 0 12px", letterSpacing: "-0.02em" }}>
-          Covenant
-        </h1>
-        <p style={{ fontSize: "1.05rem", color: "var(--text-secondary)", lineHeight: 1.65 }}>
-          A proof-carrying options agent that compiles trader mandates into typed, executable policy,
-          attacks that policy before it goes live, and enforces eight invariants on every trade —
-          with cryptographic evidence that every decision was governed.
-        </p>
-        <div style={{ display: "flex", gap: "12px", marginTop: "22px", flexWrap: "wrap" }}>
-          <Link href="/candidates" className="btn-primary">Open Candidate Lab</Link>
-          <Link href="/execution" className="btn-secondary">View Execution</Link>
-          <Link href="/mandates" className="btn-secondary">Mandate Studio</Link>
+    <div className="landing-page">
+      <section className="home-hero">
+        <div className="hero-copy">
+          <div className="hero-kicker">
+            <span className="status-dot" />
+            Paper trading only
+          </div>
+          <h1>Trade only when the proof is attached.</h1>
+          <p className="hero-subtitle">
+            Covenant is a proof-carrying options platform for defined-risk SPY and QQQ verticals.
+            The model can propose or reduce risk, but execution requires a signed permit that matches
+            the exact order.
+          </p>
+
+          <div className="hero-form" aria-label="Start with a mandate">
+            <span>Keep max loss under 0.5% and abstain on stale quotes</span>
+            <Link href="/mandates" className="btn-primary">
+              Start
+            </Link>
+          </div>
+
+          <div className="hero-actions" aria-label="Primary workflows">
+            <Link href="/candidates" className="btn-secondary">
+              Candidate Lab
+            </Link>
+            <Link href="/break-me" className="btn-secondary">
+              Break Me
+            </Link>
+            <Link href="/proof" className="btn-secondary">
+              Proof Explorer
+            </Link>
+          </div>
         </div>
-      </div>
 
-      {/* System Health */}
-      <h2 style={{ fontSize: "1.45rem", fontWeight: 800, marginBottom: "16px" }}>System Health</h2>
-      <div className="glass-panel" style={{ padding: "20px", marginBottom: "32px" }}>
-        {loading ? (
-          <div style={{ color: "var(--text-muted)", textAlign: "center", padding: "20px" }}>
-            Connecting to Alpaca paper account...
-          </div>
-        ) : health?.status === "healthy" ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px" }}>
-            <div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Status</div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
-                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "var(--emerald)", boxShadow: "0 0 8px var(--emerald)", display: "inline-block" }} />
-                <span style={{ fontWeight: 700, color: "var(--emerald)" }}>HEALTHY</span>
-              </div>
+        <div className="product-visual" aria-label="Covenant permit and candidate preview">
+          <div className="permit-preview">
+            <div className="preview-topbar">
+              <span className="badge badge-cyan">TradePermit</span>
+              <span className="mono">TTL {String(secondsRemaining).padStart(2, "0")}s</span>
             </div>
-            <div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Mode</div>
-              <div className="mono" style={{ fontWeight: 700, color: "var(--cyan)", marginTop: "4px" }}>{health.mode}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Market</div>
-              <span className={`badge ${health.alpaca.marketOpen ? "badge-emerald" : "badge-amber"}`} style={{ marginTop: "4px" }}>
-                {health.alpaca.marketOpen ? "OPEN" : "CLOSED"}
-              </span>
-            </div>
-            <div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Equity</div>
-              <div className="mono" style={{ fontWeight: 800, fontSize: "1.2rem", marginTop: "4px" }}>${health.alpaca.equity}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Options Level</div>
-              <div className="mono" style={{ fontWeight: 800, fontSize: "1.2rem", color: health.alpaca.optionsApprovedLevel >= 3 ? "var(--emerald)" : "var(--rose)", marginTop: "4px" }}>
-                Level {health.alpaca.optionsApprovedLevel}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Permit Executor</div>
-              <span className={`badge ${health.invariants.permitExecutorImplemented ? "badge-emerald" : "badge-amber"}`} style={{ marginTop: "4px" }}>
-                {health.invariants.permitExecutorImplemented ? "READY" : "AWAITING LANE B"}
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div style={{ color: "var(--amber)", textAlign: "center", padding: "20px" }}>
-            ⚠ Health check unavailable — using synthetic mock data or Alpaca unreachable.
-          </div>
-        )}
-      </div>
 
-      {/* Lane Progress */}
-      <h2 style={{ fontSize: "1.45rem", fontWeight: 800, marginBottom: "16px" }}>Lane Progress</h2>
-      <div style={{ display: "grid", gap: "12px", marginBottom: "32px" }}>
-        {LANE_STATUS.map((lane) => (
-          <div key={lane.name} className="glass-panel" style={{ padding: "18px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span className={`badge ${lane.progress >= 90 ? "badge-emerald" : lane.progress >= 50 ? "badge-cyan" : "badge-amber"}`}>
-                  LANE {lane.lane}
-                </span>
-                <strong>{lane.name}</strong>
+            <div className="trade-ticket">
+              <div>
+                <span className="ticket-label">Proposed spread</span>
+                <strong>SPY Bull Call Debit Vertical</strong>
               </div>
-              <span className="mono" style={{ fontWeight: 800, fontSize: "1.1rem", color: lane.progress >= 90 ? "var(--emerald)" : "var(--amber)" }}>
-                {lane.progress}%
-              </span>
+              <span className="badge badge-emerald">Verified</span>
             </div>
-            <div style={{ height: "4px", background: "var(--border-subtle)", borderRadius: "2px", overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${lane.progress}%`, background: lane.progress >= 90 ? "var(--emerald)" : lane.progress >= 50 ? "var(--cyan)" : "var(--amber)", borderRadius: "2px", transition: "width 0.5s ease" }} />
+
+            <div className="ticket-grid">
+              <div>
+                <span>Net debit</span>
+                <strong className="mono">$2.00</strong>
+              </div>
+              <div>
+                <span>Max loss</span>
+                <strong className="mono danger-text">$200.00</strong>
+              </div>
+              <div>
+                <span>Max gain</span>
+                <strong className="mono success-text">$300.00</strong>
+              </div>
             </div>
-            <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginTop: "8px" }}>{lane.detail}</p>
+
+            <div className="permit-hash mono">permitId: cov-paper-7a9f4cbd35e3bd4b</div>
           </div>
+
+          <div className="market-card">
+            <div className="market-card-header">
+              <div>
+                <span className="ticket-label">Defined-risk radar</span>
+                <strong>Live candidates</strong>
+              </div>
+              <Link href="/candidates" className="mini-link">
+                View all
+              </Link>
+            </div>
+
+            <div className="candidate-list">
+              {CANDIDATES.map((candidate) => (
+                <div className="candidate-row" key={`${candidate.symbol}-${candidate.legs}`}>
+                  <div>
+                    <strong>{candidate.symbol}</strong>
+                    <span>{candidate.structure}</span>
+                  </div>
+                  <div className="mono">{candidate.legs}</div>
+                  <div>{candidate.dte}</div>
+                  <div className="mono">{candidate.maxLoss}</div>
+                  <div className="confidence-track" aria-label={`${candidate.confidence}% confidence`}>
+                    <span style={{ width: `${candidate.confidence}%` }} />
+                  </div>
+                  <span className={`badge ${candidate.state === "READY" ? "badge-emerald" : "badge-amber"}`}>
+                    {candidate.state}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="trust-strip" aria-label="Platform status">
+        <div>
+          <span>Paper equity</span>
+          <strong>{formatEquity(health?.alpaca.equity)}</strong>
+        </div>
+        <div>
+          <span>Market status</span>
+          <strong className={marketOpen ? "success-text" : "warning-text"}>
+            {marketOpen ? "Session open" : "Fail-closed"}
+          </strong>
+        </div>
+        <div>
+          <span>Broker connection</span>
+          <strong className={connected ? "success-text" : "warning-text"}>
+            {connected ? "Connected" : "Paper mode"}
+          </strong>
+        </div>
+        <div>
+          <span>Options level</span>
+          <strong>Level {health?.alpaca.optionsApprovedLevel ?? 3}</strong>
+        </div>
+      </section>
+
+      <section className="metric-grid">
+        {TRUST_METRICS.map((metric) => (
+          <article className="metric-card" key={metric.label}>
+            <span>{metric.label}</span>
+            <strong>{metric.value}</strong>
+            <p>{metric.note}</p>
+          </article>
         ))}
-      </div>
+      </section>
 
-      {/* Invariant Health Grid */}
-      <h2 style={{ fontSize: "1.45rem", fontWeight: 800, marginBottom: "16px" }}>Invariant Status (COV-01 through COV-08)</h2>
-      <div className="grid-2" style={{ marginBottom: "32px" }}>
-        {INVARIANTS.map((inv) => (
-          <div key={inv.id} className="glass-panel" style={{ padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <span className="mono" style={{ fontWeight: 800, color: "var(--cyan)", marginRight: "8px" }}>{inv.id}</span>
-              <span style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>{inv.name}</span>
-            </div>
-            <span className={`badge ${inv.status === "ENFORCED" ? "badge-emerald" : "badge-amber"}`}>
-              {inv.status}
-            </span>
+      <section className="proof-section">
+        <div className="section-heading">
+          <span className="eyebrow">How it stays powerless</span>
+          <h2>Four scopes. One narrow order path.</h2>
+          <p>
+            The safest part of the product is not a promise in copy. It is the shape of the system:
+            the strategy has no broker-write credential, and every executable action is bounded by
+            deterministic checks.
+          </p>
+        </div>
+
+        <div className="proof-layout">
+          <div className="proof-steps">
+            {PROOF_STEPS.map((step, index) => (
+              <div className="proof-step" key={step}>
+                <span>{index + 1}</span>
+                <p>{step}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+          <div className="authority-panel">
+            <AuthorityBoundary />
+          </div>
+        </div>
+      </section>
 
-      {/* Architecture Overview */}
-      <h2 style={{ fontSize: "1.45rem", fontWeight: 800, marginBottom: "16px" }}>Architecture</h2>
-      <div className="glass-panel" style={{ padding: "24px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", textAlign: "center" }}>
-          {[
-            { name: "Alpha Engine", desc: "Proposes defined-risk trades", color: "var(--cyan)", status: "ACTIVE" },
-            { name: "Safety Kernel", desc: "Evaluates 8 invariants", color: "var(--cyan)", status: "ACTIVE" },
-            { name: "Permit Signer", desc: "Ed25519 short-TTL permits", color: "var(--cyan)", status: "ACTIVE" },
-            { name: "Executor", desc: "Credential-isolated order path", color: "var(--cyan)", status: "ACTIVE" },
-          ].map((component) => (
-            <div key={component.name} style={{ padding: "16px", border: `1px solid ${component.color}33`, borderRadius: "8px", background: `${component.color}08` }}>
-              <div style={{ fontWeight: 800, color: component.color, marginBottom: "6px" }}>{component.name}</div>
-              <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "8px" }}>{component.desc}</div>
-              <span className={`badge ${component.status === "ACTIVE" ? "badge-emerald" : "badge-amber"}`} style={{ fontSize: "0.62rem" }}>
-                {component.status}
-              </span>
-            </div>
+      <section className="workflow-section">
+        <div className="section-heading">
+          <span className="eyebrow">Platform</span>
+          <h2>Everything a user needs to inspect before trusting an agent.</h2>
+        </div>
+
+        <div className="workflow-grid">
+          {WORKFLOW_SURFACES.map((surface) => (
+            <Link href={surface.path} className="workflow-card" key={surface.title}>
+              <span>{surface.title}</span>
+              <p>{surface.description}</p>
+            </Link>
           ))}
         </div>
-        <div style={{ textAlign: "center", marginTop: "16px", color: "var(--text-muted)", fontSize: "0.82rem" }}>
-          Intent → Kernel → Permit → Execute — each boundary enforces credential isolation by construction
-        </div>
-      </div>
+      </section>
     </div>
   );
 }

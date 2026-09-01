@@ -11,6 +11,12 @@
  * says "no" wastes the time it was meant to save.
  */
 
+import dotenv from "dotenv";
+
+// Load .env.local if present, else .env
+dotenv.config({ path: ".env.local" });
+dotenv.config();
+
 import { getServerEnv } from "@/lib/env/server";
 
 const ESC = String.fromCharCode(27);

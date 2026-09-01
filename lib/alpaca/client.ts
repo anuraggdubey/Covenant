@@ -108,7 +108,8 @@ export class AlpacaReadClient {
       if (!response.ok) {
         throw new Error(`Alpaca ${description} returned HTTP ${response.status}.`);
       }
-      const parsed = schema.safeParse(await response.json());
+      const raw = await response.json();
+      const parsed = schema.safeParse(raw);
       if (!parsed.success) {
         throw new Error(`Alpaca ${description} returned an invalid response payload.`);
       }

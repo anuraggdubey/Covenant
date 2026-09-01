@@ -3,6 +3,7 @@ import type { AccountSnapshot, OptionContractSnapshot, Policy } from "@/types/do
 import type { CandidateSpread } from "./factory";
 import { calculateVerticalPayoff, type PayoffCalculation } from "./payoff";
 import type { SignalAnalysis } from "./signals";
+import { perTradeFraction, portfolioHeatFraction } from "@/lib/policy-units";
 
 export interface RankedCandidate {
   candidate: CandidateSpread;
@@ -83,7 +84,8 @@ export function rankAndSizeCandidates(
   const spot = Number(underlyingPrice);
   if (!signals.usable || constrainedMultiplier === 0 || equity.lessThanOrEqualTo(0)) return [];
 
-  const maxRisk = equity.times(policy.perTradeMaxLossPct);
+  // Policy limits are PERCENT; multiplying equity needs a fraction.
+  const maxRisk = equity.times(perTradeFraction(policy));
   const ranked: RankedCandidate[] = [];
 
   for (const candidate of candidates) {
@@ -119,7 +121,7 @@ export function rankAndSizeCandidates(
     const currentHeat = equity.times(account.portfolioHeatPct);
     const totalHeat = currentHeat.plus(finalPayoff.standaloneMaxLoss);
     const totalHeatPct = totalHeat.dividedBy(equity);
-    if (totalHeatPct.greaterThan(policy.portfolioHeatMaxLossPct)) continue;
+    if (totalHeatPct.greaterThan(portfolioHeatFraction(policy))) continue;
 
     const expectedPnl = scenario.expectedPnlPerContract * quantity;
     const lowerBound = scenario.lowerConfidenceBoundPerContract * quantity;

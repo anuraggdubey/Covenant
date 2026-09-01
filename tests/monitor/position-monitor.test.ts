@@ -21,7 +21,7 @@ const mockPolicy: Policy = {
   minDelta: 0.2,
   maxDelta: 0.8,
   maxQuoteAgeMs: 60000,
-  maxBidAskWidthPct: 0.25,
+  maxBidAskWidthPct: 25,
   minOpenInterest: 0,
   minVolume: 0,
   duplicateExposureCooldownMinutes: 30,

@@ -11,6 +11,7 @@ import { analyzeMarketSignals } from "./signals";
 import { rankAndSizeCandidates } from "./ranking";
 import { sha256Canonical } from "./canonical";
 import type { AlpacaBar } from "@/lib/alpaca/types";
+import { dailyHaltFraction } from "@/lib/policy-units";
 
 /**
  * Alpha Engine proposal entry point.
@@ -78,7 +79,7 @@ export async function propose(
   }
 
   const dailyPnl = new Decimal(account.dailyRealizedPnl).plus(account.dailyUnrealizedPnl);
-  if (dailyPnl.dividedBy(equityDec).lessThanOrEqualTo(policy.dailyHaltPct)) {
+  if (dailyPnl.dividedBy(equityDec).lessThanOrEqualTo(dailyHaltFraction(policy))) {
     return {
       abstain: true,
       reason: `[FAIL-CLOSED] Daily P&L has reached the policy halt threshold (${policy.dailyHaltPct}).`,

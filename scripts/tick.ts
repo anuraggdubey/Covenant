@@ -52,14 +52,46 @@ async function main() {
         for (const leg of intent.legs) {
           console.log(`    - ${leg.positionIntent} ${leg.ratioQty}x ${leg.symbol}`);
         }
+        const gov = item.governance;
+        if (gov) {
+          console.log("");
+          console.log(`  [SAFETY KERNEL] ${gov.decision}`);
+          console.log(`    Reason:  ${gov.reason}`);
+          if (gov.failedInvariants.length > 0) {
+            console.log(`    Failed:  ${gov.failedInvariants.join(", ")}`);
+          }
+          if (gov.shrunkQuantity !== undefined) {
+            console.log(`    Shrunk:  ${intent.quantity} -> ${gov.shrunkQuantity} contracts`);
+          }
+          if (gov.permit) {
+            console.log(`    Permit:  ${gov.permit.permitId}`);
+            console.log(`    Expires: ${gov.permit.expiresAt}`);
+          }
+          if (gov.heldForOperator) {
+            console.log("    Held:    permit issued; submission is opt-in (COVENANT_LIVE_SUBMIT=true)");
+          }
+          if (gov.execution?.submitted === true) {
+            console.log(`    ORDER:   ${gov.execution.orderId} (request ${gov.execution.requestId})`);
+          } else if (gov.execution?.submitted === false) {
+            console.log(`    REJECTED at executor: ${gov.execution.code} - ${gov.execution.reason}`);
+          }
+        } else {
+          console.log("  [SAFETY KERNEL] not reached");
+        }
       } else {
         console.log("  Decision:  ABSTAIN");
         console.log(`  Reason:    ${item.proposal.reason}`);
       }
     }
 
+    console.log(`
+[SESSION] ${result.session?.state ?? "UNKNOWN"} on ${result.session?.sessionDate ?? "?"}`);
+    if (result.session?.haltReason) console.log(`  Halt: ${result.session.haltReason}`);
+    console.log(`[SUBMISSION MODE] ${result.submissionMode}`);
+    console.log(`[JOURNAL] ${result.events?.length ?? 0} hash-chained events`);
+
     console.log("\n===============================================================");
-    console.log("   Tick completed successfully. Zero write credentials used.  ");
+    console.log("   Tick complete. Governance ran on every proposal.            ");
     console.log("===============================================================\n");
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

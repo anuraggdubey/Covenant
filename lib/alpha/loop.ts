@@ -4,6 +4,13 @@ import { buildAccountSnapshot, buildMarketSnapshot } from "./snapshots";
 import { propose } from "./engine";
 import { sha256Canonical } from "./canonical";
 import { monitorPositions, type PositionMonitorResult } from "@/lib/monitor/position-monitor";
+import { EventJournal } from "@/lib/audit/journal";
+import { governIntent, type GovernResult } from "@/lib/execution/pipeline";
+import { defaultNonceStore } from "@/lib/permits/nonce";
+import { reconcileForTick } from "@/lib/safety/session-store";
+import type { CovenantEvent, MarketClock, OpenPosition } from "@/types/domain";
+import { computeAccountSnapshotHash, computeMarketSnapshotHash } from "@/lib/hashes";
+import { profileLimits, toPolicyUnits } from "@/lib/mandates/profiles";
 
 export interface TickResult {
   timestamp: string;
@@ -25,8 +32,27 @@ export interface TickResult {
     symbol: "SPY" | "QQQ";
     marketSnapshotHash?: string;
     proposal: { intent: TradeIntent } | { abstain: true; reason: string };
+    /** Kernel verdict for this proposal. Absent when the engine abstained. */
+    governance?: GovernResult;
   }>;
   positionMonitor?: PositionMonitorResult;
+  /** Session state COV-04 evaluated against. */
+  session?: { state: string; sessionDate: string; haltReason: string | null };
+  /** Whether this tick was allowed to reach the broker at all. */
+  submissionMode: "LIVE" | "HELD";
+  /** Hash-chained record of the tick. Replayable with `npm run verify`. */
+  events?: CovenantEvent[];
+}
+
+/**
+ * Submission is opt-in, and deliberately awkward to turn on.
+ *
+ * A scheduled job that begins trading the moment a credential shows up in the
+ * environment is not something anyone should run. Governance always executes;
+ * only the broker call is gated.
+ */
+function liveSubmitEnabled(): boolean {
+  return process.env.COVENANT_LIVE_SUBMIT === "true";
 }
 
 /** In-memory tick history for the dashboard (resets on server restart). */
@@ -43,29 +69,31 @@ export function clearTickHistory(): void {
   tickHistory.length = 0;
 }
 
+/**
+ * The default active policy.
+ *
+ * Derived from Lane C's calibrated profile rather than hand-written, because
+ * hand-written was wrong twice: the equity ratios and the spread-width cap
+ * were both left in fraction units while `Policy` expresses them as percent.
+ * `toPolicyUnits` is the single conversion, so there is nothing left here to
+ * get out of step. See lib/policy-units.ts.
+ */
+const balancedLimits = toPolicyUnits(profileLimits("BALANCED"));
+
 const defaultPolicyFields: Omit<Policy, "policyHash"> = {
   id: "pol_covenant_active_v1",
   version: 1,
   status: "ACTIVE",
   createdAt: "2026-08-30T00:00:00.000Z",
   activatedAt: "2026-08-30T00:00:00.000Z",
-  plainEnglishEcho: "Trade defined-risk SPY and QQQ vertical spreads with max 0.60% risk per trade and 2.50% portfolio heat.",
+  plainEnglishEcho:
+    "Trade defined-risk SPY and QQQ vertical spreads with max " +
+    `${balancedLimits.perTradeMaxLossPct.toFixed(2)}% risk per trade and ` +
+    `${balancedLimits.portfolioHeatMaxLossPct.toFixed(2)}% portfolio heat.`,
   allowedUnderlyings: ["SPY", "QQQ"],
   allowedStructures: ["BULL_CALL_DEBIT", "BEAR_PUT_DEBIT", "CREDIT_VERTICAL"],
   riskProfile: "BALANCED",
-  perTradeMaxLossPct: 0.006,
-  portfolioHeatMaxLossPct: 0.025,
-  dailyHaltPct: -0.0125,
-  minDte: 7,
-  maxDte: 21,
-  minDelta: 0.20,
-  maxDelta: 0.80,
-  maxQuoteAgeMs: 60000,
-  maxBidAskWidthPct: 0.25,
-  minOpenInterest: 100,
-  minVolume: 10,
-  duplicateExposureCooldownMinutes: 30,
-  exitAttemptDeadlineMinutes: 15,
+  ...balancedLimits,
   missingStateAction: "ABSTAIN",
   modelAuthority: "VETO_OR_SHRINK",
   invariants: ["COV-01", "COV-02", "COV-03", "COV-04", "COV-05", "COV-06", "COV-07", "COV-08"],
@@ -75,6 +103,21 @@ export const defaultActivePolicy: Policy = {
   ...defaultPolicyFields,
   policyHash: sha256Canonical(defaultPolicyFields),
 };
+
+/**
+ * Open positions in the shape the kernel needs.
+ *
+ * An empty broker position list is a fact we can assert, so it maps to [].
+ * A non-empty one is not: deriving `structure` and `standaloneMaxLoss` back
+ * out of raw legs is not yet implemented, and guessing would understate risk
+ * in COV-03. So we return undefined, COV-03/06/07 abstain, and the dashboard
+ * says why. That is the correct failure until the mapping lands.
+ */
+function toOpenPositions(monitor: PositionMonitorResult | undefined): OpenPosition[] | undefined {
+  if (monitor === undefined) return undefined;
+  if (monitor.summary.total === 0) return [];
+  return undefined;
+}
 
 /**
  * Single unified tick execution path for both cron and CLI.
@@ -91,7 +134,65 @@ export async function executeTick(
 
   // 2. Fetch Account State & Build Account Snapshot
   const rawAccount = await readClient.getAccount();
-  const accountSnapshot: AccountSnapshot = buildAccountSnapshot(rawAccount);
+  const baseAccount: AccountSnapshot = buildAccountSnapshot(rawAccount);
+
+  const marketClock: MarketClock = {
+    isOpen: clock.is_open,
+    // The broker's own trading date. COV-04 resets a halt on this, never on a
+    // wall-clock rollover in whatever timezone the host happens to run in.
+    sessionDate: clock.timestamp.slice(0, 10),
+    nextOpen: clock.next_open,
+    nextClose: clock.next_close
+  };
+
+  const journal = new EventJournal({ actor: "tick" });
+  const submitLive = liveSubmitEnabled();
+
+  // Positions are monitored BEFORE proposing, because COV-03, COV-06 and
+  // COV-07 all read the open book and the account snapshot has to carry it
+  // before it is hashed.
+  let positionMonitor: PositionMonitorResult | undefined;
+  try {
+    positionMonitor = await monitorPositions(readClient, policy);
+  } catch {
+    // Monitoring failure is not fail-open here: leaving openPositions
+    // undefined makes COV-03/06/07 abstain, which is the correct outcome.
+  }
+
+  const equityNumber = Number(baseAccount.equity);
+  const dayPnlNumber = Number(baseAccount.dailyUnrealizedPnl);
+  const enrichedAccount: AccountSnapshot = {
+    ...baseAccount,
+    dayPnlPct:
+      Number.isFinite(equityNumber) && equityNumber > 0 && Number.isFinite(dayPnlNumber)
+        ? (dayPnlNumber / equityNumber) * 100
+        : undefined,
+    tradingBlocked: baseAccount.status.toUpperCase() !== "ACTIVE",
+    openPositions: toOpenPositions(positionMonitor),
+    snapshotHash: ""
+  };
+  const accountSnapshot: AccountSnapshot = {
+    ...enrichedAccount,
+    snapshotHash: computeAccountSnapshotHash(enrichedAccount)
+  };
+
+  const { session, justHalted } = reconcileForTick(
+    marketClock,
+    accountSnapshot,
+    policy.dailyHaltPct,
+    new Date()
+  );
+  if (justHalted) {
+    journal.append("HALT_TRIGGERED", { reason: session.haltReason }, "safety-kernel");
+  }
+
+  journal.append("ACCOUNT_SNAPSHOT_RECORDED", { account: accountSnapshot }, "alpha");
+
+  const sessionSummary = {
+    state: session.state,
+    sessionDate: session.sessionDate,
+    haltReason: session.haltReason
+  };
 
   const underlyingsResult: TickResult["underlyings"] = [];
 
@@ -117,6 +218,9 @@ export async function executeTick(
         snapshotHash: accountSnapshot.snapshotHash,
       },
       underlyings: underlyingsResult,
+      session: sessionSummary,
+      submissionMode: submitLive ? "LIVE" : "HELD",
+      events: [...journal.all()],
     };
     recordTickResult(result);
     return result;
@@ -141,12 +245,22 @@ export async function executeTick(
         throw new Error(`Missing underlying trade and quote price for ${sym}.`);
       }
 
-      const marketSnapshot: MarketSnapshot = buildMarketSnapshot(
+      const chainSnapshot = buildMarketSnapshot(
         sym,
         underlyingPrice,
         rawOptions,
         readClient.isMockMode() ? "synthetic" : readClient.getOptionFeed()
       );
+
+      // The clock has to be inside the snapshot BEFORE it is hashed: COV-08
+      // re-derives the hash, and COV-04 reads the session date out of it.
+      // Attaching it afterwards would invalidate the hash the intent binds to.
+      const withClock: MarketSnapshot = { ...chainSnapshot, clock: marketClock };
+      const marketSnapshot: MarketSnapshot = {
+        ...withClock,
+        snapshotHash: computeMarketSnapshotHash(withClock)
+      };
+      journal.append("MARKET_SNAPSHOT_RECORDED", { market: marketSnapshot }, "alpha");
 
       const impliedVolatilities = Object.values(marketSnapshot.contracts)
         .map((contract) => contract.impliedVolatility)
@@ -156,10 +270,25 @@ export async function executeTick(
         : undefined;
       const proposal = await propose(policy, marketSnapshot, accountSnapshot, { bars, chainIvAverage });
 
+      // The seam. A proposal is not a trade until the kernel says so, and the
+      // engine that produced it has no way to reach the broker itself.
+      let governance: GovernResult | undefined;
+      if ("intent" in proposal) {
+        governance = await governIntent(proposal.intent, policy, {
+          account: accountSnapshot,
+          market: marketSnapshot,
+          session,
+          journal,
+          nonceStore: defaultNonceStore,
+          submit: submitLive,
+        });
+      }
+
       underlyingsResult.push({
         symbol: sym,
         marketSnapshotHash: marketSnapshot.snapshotHash,
         proposal,
+        governance,
       });
     } catch (err: unknown) {
       const reason = err instanceof Error ? err.message : String(err);
@@ -167,18 +296,10 @@ export async function executeTick(
         symbol: sym,
         proposal: {
           abstain: true,
-          reason: `[FAIL-CLOSED] Failed to fetch market data for ${sym}: ${reason}`,
+          reason: `[FAIL-CLOSED] Market data or governance failed for ${sym}: ${reason}`,
         },
       });
     }
-  }
-
-  // 4. Monitor existing positions for exit conditions
-  let positionMonitor: PositionMonitorResult | undefined;
-  try {
-    positionMonitor = await monitorPositions(readClient, policy);
-  } catch {
-    // Fail open for position monitoring — it's not a trade gate
   }
 
   const result: TickResult = {
@@ -199,6 +320,9 @@ export async function executeTick(
     },
     underlyings: underlyingsResult,
     positionMonitor,
+    session: sessionSummary,
+    submissionMode: submitLive ? "LIVE" : "HELD",
+    events: [...journal.all()],
   };
 
   recordTickResult(result);

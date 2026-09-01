@@ -25,6 +25,8 @@ import corpus from "@/docs/mandates/corpus-v1.json";
 import { verifyManifest } from "@/lib/audit/verify";
 import { mayActivate, runBreakMe } from "@/lib/break-me";
 import { compileMandate } from "@/lib/mandates/compile";
+import { defaultActivePolicy } from "@/lib/alpha/loop";
+import { assertPercentUnits } from "@/lib/policy-units";
 import { INVARIANT_REGISTRY } from "@/lib/safety/invariants";
 import { ALL_INVARIANTS, type RunManifest } from "@/types/domain";
 
@@ -192,6 +194,54 @@ function auditReplay(): void {
   );
 }
 
+// --- Pipeline: is the loop actually joined? ---------------------------------
+
+function auditPipeline(): void {
+  const lib = sourceFiles("lib");
+
+  const loop = lib.find((f) => f.path === "lib/alpha/loop.ts");
+  const joined = loop !== undefined && /governIntent\(/.test(loop.source);
+  record(
+    "pipeline",
+    joined,
+    joined
+      ? "The scheduled tick routes every proposal through the Safety Kernel."
+      : "lib/alpha/loop.ts never calls governIntent — the loop stops at 'propose'."
+  );
+
+  const pipeline = lib.find((f) => f.path === "lib/execution/pipeline.ts");
+  const optIn = pipeline !== undefined && /COVENANT_LIVE_SUBMIT/.test(pipeline.source);
+  record(
+    "pipeline",
+    optIn,
+    optIn
+      ? "Broker submission is opt-in; governance runs regardless."
+      : "Submission gating is missing from the pipeline."
+  );
+
+  // The 100x bug: Policy is PERCENT, Lane C calibrates in FRACTIONS.
+  let unitsOk = true;
+  let unitsDetail = "Shipped default policy is in percent units and matches the calibrated profile.";
+  try {
+    assertPercentUnits(defaultActivePolicy, "defaultActivePolicy");
+  } catch (error) {
+    unitsOk = false;
+    unitsDetail = error instanceof Error ? error.message : String(error);
+  }
+  record("pipeline", unitsOk, unitsDetail);
+
+  // A spread band under 1% would reject every real option quote while looking
+  // like caution. That is how the unit bug hid for a day.
+  const band = defaultActivePolicy.maxBidAskWidthPct;
+  record(
+    "pipeline",
+    band > 1 && band <= 100,
+    band > 1 && band <= 100
+      ? `Spread band is ${band}% — a real chain can clear it.`
+      : `Spread band is ${band}%, which no option quote can clear. Check units.`
+  );
+}
+
 // --- 5. Mandate compiler against Lane C's corpus ----------------------------
 
 interface CorpusCase {
@@ -332,6 +382,7 @@ function main(): void {
   auditPaperOnly();
   auditInvariants();
   auditReplay();
+  auditPipeline();
   auditMandates();
   auditBreakMe();
   auditSecrets();

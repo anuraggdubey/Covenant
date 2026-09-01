@@ -96,7 +96,10 @@ export function generateCandidates(
 
     // 4. Bid-Ask spread width check
     const midDec = bidDec.plus(askDec).dividedBy(2);
-    const widthPct = askDec.minus(bidDec).dividedBy(midDec).toNumber();
+    // PERCENT, to match policy.maxBidAskWidthPct and COV-05. As a bare ratio
+    // this comparison was always false, which silently disabled the filter and
+    // let the kernel veto candidates the factory should never have proposed.
+    const widthPct = askDec.minus(bidDec).dividedBy(midDec).times(100).toNumber();
     if (widthPct > policy.maxBidAskWidthPct) {
       continue;
     }

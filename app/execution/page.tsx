@@ -59,13 +59,13 @@ export default function ExecutionPage() {
     <div className="page-container">
       <div style={{ marginBottom: "28px" }}>
         <div style={{ display: "inline-flex", gap: "8px", marginBottom: "8px" }}>
-          <span className="badge badge-cyan">LANE A · AUTONOMOUS LOOP</span>
-          <span className="badge badge-amber">EXECUTOR PENDING (LANE B)</span>
+          <span className="badge badge-cyan">AUTONOMOUS LOOP</span>
+          <span className="badge badge-emerald">PERMIT EXECUTOR ACTIVE</span>
         </div>
         <h1 style={{ fontSize: "2.4rem", fontWeight: 900, letterSpacing: "-0.02em" }}>Execution</h1>
         <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", maxWidth: "720px" }}>
           Tick execution history, position monitoring, and the autonomous order pipeline.
-          The Alpha Engine proposes TradeIntents — execution requires Lane B&apos;s Permit Executor.
+          The Alpha Engine proposes TradeIntents — executed solely via signed Ed25519 TradePermits.
         </p>
       </div>
 

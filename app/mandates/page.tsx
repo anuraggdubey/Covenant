@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+
+interface Contradiction {
+  code: string;
+  fields: string[];
+  reason: string;
+}
 
 interface MandateCase {
   id: string;
@@ -16,7 +22,7 @@ interface MandateCase {
     invariants: string[];
     riskOverrides?: Record<string, unknown>;
   };
-  expectedContradictions: string[];
+  expectedContradictions: Contradiction[];
 }
 
 interface CorpusData {
@@ -31,17 +37,16 @@ export default function MandateStudioPage() {
   const [mandateText, setMandateText] = useState("");
 
   useEffect(() => {
-    fetch("/docs/mandates/corpus-v1.json")
+    fetch("/api/mandates/corpus")
       .then((r) => r.json())
       .then((data: CorpusData) => {
         setCorpus(data);
         if (data.cases.length > 0) {
-          setSelectedMandate(data.cases[0]);
-          setMandateText(data.cases[0].mandateText);
+          setSelectedMandate(data.cases[0]!);
+          setMandateText(data.cases[0]!.mandateText);
         }
       })
       .catch(() => {
-        // Fallback if static file isn't accessible
         setCorpus(null);
       });
   }, []);
@@ -66,7 +71,6 @@ export default function MandateStudioPage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.2fr) minmax(340px, 0.8fr)", gap: "24px" }}>
-        {/* Mandate Input + Corpus */}
         <div>
           <div className="glass-panel" style={{ padding: "24px", marginBottom: "24px" }}>
             <h3 style={{ fontSize: "1.2rem", fontWeight: 800, marginBottom: "14px" }}>Plain-English Mandate</h3>
@@ -84,14 +88,17 @@ export default function MandateStudioPage() {
                 fontSize: "0.95rem",
                 fontFamily: "inherit",
                 lineHeight: 1.5,
-                resize: "vertical",
+                resize: "vertical"
               }}
             />
             <div style={{ display: "flex", gap: "12px", marginTop: "16px", flexWrap: "wrap" }}>
-              <button className="btn-primary" onClick={() => {
-                const match = corpus?.cases.find((c) => c.mandateText === mandateText);
-                if (match) setSelectedMandate(match);
-              }}>
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  const match = corpus?.cases.find((c) => c.mandateText === mandateText);
+                  if (match) setSelectedMandate(match);
+                }}
+              >
                 Compile & Echo Policy
               </button>
               <button className="btn-secondary" disabled>
@@ -100,7 +107,6 @@ export default function MandateStudioPage() {
             </div>
           </div>
 
-          {/* Valid Mandates */}
           <h3 style={{ fontSize: "1.1rem", fontWeight: 800, marginBottom: "12px" }}>
             Valid Mandates ({valid.length})
           </h3>
@@ -110,7 +116,10 @@ export default function MandateStudioPage() {
                 key={m.id}
                 className="glass-panel"
                 style={{ padding: "14px", cursor: "pointer", borderLeft: "3px solid var(--cyan)", opacity: selectedMandate?.id === m.id ? 1 : 0.75 }}
-                onClick={() => { setSelectedMandate(m); setMandateText(m.mandateText); }}
+                onClick={() => {
+                  setSelectedMandate(m);
+                  setMandateText(m.mandateText);
+                }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
                   <span className="mono" style={{ fontWeight: 800, color: "var(--cyan)", fontSize: "0.78rem" }}>{m.id}</span>
@@ -121,7 +130,6 @@ export default function MandateStudioPage() {
             ))}
           </div>
 
-          {/* Contradictory Mandates */}
           {contradictory.length > 0 && (
             <>
               <h3 style={{ fontSize: "1.1rem", fontWeight: 800, marginBottom: "12px", color: "var(--rose)" }}>
@@ -133,7 +141,10 @@ export default function MandateStudioPage() {
                     key={m.id}
                     className="glass-panel"
                     style={{ padding: "14px", cursor: "pointer", borderLeft: "3px solid var(--rose)", opacity: selectedMandate?.id === m.id ? 1 : 0.75 }}
-                    onClick={() => { setSelectedMandate(m); setMandateText(m.mandateText); }}
+                    onClick={() => {
+                      setSelectedMandate(m);
+                      setMandateText(m.mandateText);
+                    }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
                       <span className="mono" style={{ fontWeight: 800, color: "var(--rose)", fontSize: "0.78rem" }}>{m.id}</span>
@@ -142,7 +153,7 @@ export default function MandateStudioPage() {
                     <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>{m.mandateText}</div>
                     <div style={{ display: "flex", gap: "4px", marginTop: "6px", flexWrap: "wrap" }}>
                       {m.expectedContradictions.map((c) => (
-                        <span key={c} className="badge badge-rose" style={{ fontSize: "0.64rem" }}>{c}</span>
+                        <span key={c.code} className="badge badge-rose" style={{ fontSize: "0.64rem" }}>{c.code}</span>
                       ))}
                     </div>
                   </div>
@@ -152,7 +163,6 @@ export default function MandateStudioPage() {
           )}
         </div>
 
-        {/* Compiled Policy Echo */}
         <div className="glass-panel" style={{ padding: "24px", alignSelf: "start", position: "sticky", top: "80px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
             <h3 style={{ fontSize: "1.2rem", fontWeight: 800 }}>Compiled Policy Echo</h3>
@@ -169,7 +179,13 @@ export default function MandateStudioPage() {
                 <div style={{ padding: "12px", background: "var(--danger-subtle)", border: "1px solid var(--rose)", borderRadius: "8px", marginBottom: "16px" }}>
                   <div style={{ fontWeight: 700, color: "var(--rose)", marginBottom: "6px", fontSize: "0.85rem" }}>Contradictions Detected</div>
                   {selectedMandate.expectedContradictions.map((c) => (
-                    <div key={c} style={{ fontSize: "0.8rem", color: "var(--rose)", padding: "2px 0" }}>✗ {c}</div>
+                    <div key={c.code} style={{ fontSize: "0.8rem", color: "var(--rose)", padding: "6px 0" }}>
+                      <div className="mono" style={{ fontWeight: 700 }}>{c.code}</div>
+                      <div style={{ color: "var(--text-secondary)", marginTop: "2px" }}>{c.reason}</div>
+                      <div className="mono" style={{ color: "var(--text-muted)", marginTop: "2px" }}>
+                        {c.fields.join(", ")}
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -182,7 +198,7 @@ export default function MandateStudioPage() {
                   { label: "Structures", value: selectedMandate.expectedCompiledPolicy.allowedStructures.join(", ") },
                   { label: "Missing State", value: selectedMandate.expectedCompiledPolicy.missingStateAction },
                   { label: "Model Authority", value: selectedMandate.expectedCompiledPolicy.modelAuthority },
-                  { label: "Invariants", value: `${selectedMandate.expectedCompiledPolicy.invariants.length} bound` },
+                  { label: "Invariants", value: `${selectedMandate.expectedCompiledPolicy.invariants.length} bound` }
                 ].map(({ label, value }) => (
                   <div key={label} style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ color: "var(--text-muted)" }}>{label}:</span>

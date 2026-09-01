@@ -22,20 +22,20 @@ interface HealthData {
 }
 
 const INVARIANTS = [
-  { id: "COV-01", name: "Exact unexpired single-use permit", owner: "Lane B", status: "PENDING" },
-  { id: "COV-02", name: "Finite max loss inside per-trade cap", owner: "Lane A", status: "ENFORCED" },
-  { id: "COV-03", name: "Portfolio heat under the configured ceiling", owner: "Lane A", status: "ENFORCED" },
-  { id: "COV-04", name: "Daily halt until a verified new session", owner: "Lane A", status: "ENFORCED" },
-  { id: "COV-05", name: "Fresh liquid contracts inside mandate bands", owner: "Lane A", status: "ENFORCED" },
-  { id: "COV-06", name: "No duplicate equivalent exposure in cooldown", owner: "Lane B", status: "PENDING" },
+  { id: "COV-01", name: "Exact unexpired single-use permit", owner: "Lane B", status: "ENFORCED" },
+  { id: "COV-02", name: "Finite max loss inside per-trade cap", owner: "Lane A + B", status: "ENFORCED" },
+  { id: "COV-03", name: "Portfolio heat under the configured ceiling", owner: "Lane B", status: "ENFORCED" },
+  { id: "COV-04", name: "Daily halt until a verified new session", owner: "Lane B", status: "ENFORCED" },
+  { id: "COV-05", name: "Fresh liquid contracts inside mandate bands", owner: "Lane B", status: "ENFORCED" },
+  { id: "COV-06", name: "No duplicate equivalent exposure in cooldown", owner: "Lane B", status: "ENFORCED" },
   { id: "COV-07", name: "Timely exit attempts with escalation", owner: "Lane A", status: "ENFORCED" },
-  { id: "COV-08", name: "Missing or inconsistent state returns ABSTAIN", owner: "Lane A", status: "ENFORCED" },
+  { id: "COV-08", name: "Missing or inconsistent state returns ABSTAIN", owner: "Lane B", status: "ENFORCED" },
 ];
 
 const LANE_STATUS = [
-  { name: "Alpha Engine", lane: "A", progress: 95, detail: "Read client, candidate factory, payoff math, signals, ranking, tick loop, and position monitor." },
-  { name: "Safety Kernel & Permits", lane: "B", progress: 5, detail: "Only frozen domain types exist. Invariant evaluators, Ed25519 signing, and executor are pending." },
-  { name: "Mandate & Validation", lane: "C", progress: 90, detail: "12 mandates committed, risk profiles calibrated, walk-forward validation complete." },
+  { name: "Alpha Engine", lane: "A", progress: 100, detail: "Read client, candidate factory, payoff math, signals, ranking, tick loop, and position monitor." },
+  { name: "Safety Kernel & Permits", lane: "B", progress: 100, detail: "Safety kernel, 8 invariant evaluators, Ed25519 permits, isolated executor, Break Me, Shadow Ledger, and replay verifier." },
+  { name: "Mandate & Validation", lane: "C", progress: 100, detail: "12 benchmark mandates committed, risk profiles calibrated, walk-forward validation complete." },
 ];
 
 export default function OverviewPage() {
@@ -166,9 +166,9 @@ export default function OverviewPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", textAlign: "center" }}>
           {[
             { name: "Alpha Engine", desc: "Proposes defined-risk trades", color: "var(--cyan)", status: "ACTIVE" },
-            { name: "Safety Kernel", desc: "Evaluates 8 invariants", color: "var(--amber)", status: "PENDING" },
-            { name: "Permit Signer", desc: "Ed25519 short-TTL permits", color: "var(--amber)", status: "PENDING" },
-            { name: "Executor", desc: "Credential-isolated order path", color: "var(--amber)", status: "PENDING" },
+            { name: "Safety Kernel", desc: "Evaluates 8 invariants", color: "var(--cyan)", status: "ACTIVE" },
+            { name: "Permit Signer", desc: "Ed25519 short-TTL permits", color: "var(--cyan)", status: "ACTIVE" },
+            { name: "Executor", desc: "Credential-isolated order path", color: "var(--cyan)", status: "ACTIVE" },
           ].map((component) => (
             <div key={component.name} style={{ padding: "16px", border: `1px solid ${component.color}33`, borderRadius: "8px", background: `${component.color}08` }}>
               <div style={{ fontWeight: 800, color: component.color, marginBottom: "6px" }}>{component.name}</div>

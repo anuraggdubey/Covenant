@@ -57,7 +57,7 @@ export default function ShadowLedgerPage() {
       <div style={{ marginBottom: "28px" }}>
         <div style={{ display: "inline-flex", gap: "8px", marginBottom: "8px" }}>
           <span className="badge badge-cyan">SHADOW LEDGER</span>
-          <span className="badge badge-amber">MARKS COLLECTION PENDING (LANE B)</span>
+          <span className="badge badge-emerald">ACTIVE</span>
         </div>
         <h1 style={{ fontSize: "2.4rem", fontWeight: 900, letterSpacing: "-0.02em" }}>Shadow Ledger</h1>
         <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", maxWidth: "720px" }}>
@@ -79,7 +79,7 @@ export default function ShadowLedgerPage() {
       </div>
 
       {/* Rule Attribution */}
-      <h2 style={{ fontSize: "1.3rem", fontWeight: 800, marginBottom: "16px" }}>Rule-Level Attribution (Planned)</h2>
+      <h2 style={{ fontSize: "1.3rem", fontWeight: 800, marginBottom: "16px" }}>Rule-Level Attribution</h2>
       <div className="glass-panel" style={{ padding: "20px", marginBottom: "32px", overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.84rem" }}>
           <thead>
@@ -145,10 +145,10 @@ export default function ShadowLedgerPage() {
 
       {/* Important Notice */}
       <div className="glass-panel" style={{ padding: "18px", marginTop: "24px", borderLeft: "3px solid var(--amber)" }}>
-        <div style={{ fontWeight: 700, color: "var(--amber)", marginBottom: "6px" }}>⚠ Shadow Marks Not Yet Collected</div>
+        <div style={{ fontWeight: 700, color: "var(--amber)", marginBottom: "6px" }}>Live Shadow Marks Await Paper Run</div>
         <div style={{ fontSize: "0.84rem", color: "var(--text-secondary)" }}>
-          Synchronised candidate marks and rule-level counterfactual P&L attribution require Lane B&apos;s event journal
-          (T-B5, T-B10). No P&L claim, Sharpe ratio, or backfilled outcome is displayed until verified evidence exists.
+          The Lane B journal and Shadow Ledger are implemented and audited. Live P&L attribution still waits
+          for a real permit-bound Alpaca paper run, so no Sharpe ratio or backfilled outcome is displayed.
         </div>
       </div>
     </div>

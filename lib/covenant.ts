@@ -5,13 +5,13 @@ export const components: CovenantComponent[] = [
     name: "Mandate Studio",
     authority: "Drafts typed policy from plain English, then waits for explicit activation.",
     output: "Versioned Policy JSON and plain-English echo",
-    status: "draft"
+    status: "active"
   },
   {
     name: "Break Me Engine",
     authority: "Attacks policy invariants with generated hostile orders and portfolio states.",
     output: "Coverage report or minimized counterexample",
-    status: "blocked"
+    status: "active"
   },
   {
     name: "Alpha Engine",
@@ -23,7 +23,7 @@ export const components: CovenantComponent[] = [
     name: "Safety Kernel + Permit Executor",
     authority: "Signs exact short-lived TradePermits and submits only matching Alpaca paper orders.",
     output: "Decision Certificate and Alpaca order ID",
-    status: "blocked"
+    status: "active"
   }
 ];
 

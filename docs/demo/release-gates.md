@@ -6,11 +6,11 @@ The 90-second script is recordable only when every required gate is checked with
 | --- | --- | --- | --- |
 | G-01 | Fresh $100k Alpaca paper account, Level 3 confirmed, masked account ID recorded | All | BLOCKED |
 | G-02 | Real manual competition-window multi-leg paper order ID | All | BLOCKED |
-| G-03 | Four tamper attacks fail before any Alpaca call | Lane B | BLOCKED |
-| G-04 | Signed 60-second TradePermit with atomic single-use nonce | Lane B | BLOCKED |
+| G-03 | Four tamper attacks fail before any Alpaca call | Lane B | VERIFIED (`tests/execution/executor.attacks.test.ts`) |
+| G-04 | Signed 60-second TradePermit with atomic single-use nonce | Lane B | VERIFIED (`tests/safety/kernel.test.ts`, `tests/execution/executor.attacks.test.ts`) |
 | G-05 | Permit-bound `mleg` accepted by Alpaca paper; order ID and `X-Request-ID` recorded | Lane B + A | BLOCKED |
-| G-06 | Complete hash-chained event run for the same order | Lane B | BLOCKED |
-| G-07 | `npm run verify -- demo/run_manifest.json` exits 0 on a fresh clone | Lane B | BLOCKED |
+| G-06 | Complete hash-chained event run for the same order | Lane B | IMPLEMENTED; BLOCKED ON G-05 REAL ORDER |
+| G-07 | `npm run verify -- demo/run_manifest.json` exits 0 on a fresh clone | Lane B | VERIFIED LOCALLY; FRESH-CLONE RERUN STILL REQUIRED |
 | G-08 | Deployed dashboard reachable without local credentials | Lane A | BLOCKED |
 | G-09 | Final tab counts measured twice against deployed DOM | Lane C | BLOCKED |
 | G-10 | No credentials, private keys, full account ID, or unrelated notifications visible | Lane C | BLOCKED |

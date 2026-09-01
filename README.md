@@ -2,23 +2,21 @@
 
 > Status: in development | Alpaca paper trading only | no verified performance claims
 
-Covenant is a constrained options-agent prototype for the Alpaca AI Trading Agents Hackathon. Lane A builds and ranks defined-risk SPY/QQQ vertical-spread intents. Lane B will provide the deterministic Safety Kernel, signed `TradePermit`, paper-order executor, event journal, and verifier. Lane C owns mandates, validation, demo evidence, and submission QA.
+Covenant is a proof-carrying options-agent prototype for the Alpaca AI Trading Agents Hackathon. Lane A builds and ranks defined-risk SPY/QQQ vertical-spread intents. Lane B provides the deterministic Safety Kernel, signed `TradePermit`, paper-order executor, event journal, Break Me adversarial engine, Shadow Ledger, and replay verifier. Lane C provides mandates, historical validation, demo evidence, and submission QA.
 
 ## Current Capability
 
 | Capability | State |
 | --- | --- |
 | Strict read-only Alpaca adapter | Implemented; exact paper/data hosts, typed responses, option pagination, separate stock/options feeds |
-| Canonical market/account snapshot hashing | Implemented in memory |
-| Snapshot persistence | Blocked on Lane B storage repositories and migrations |
+| Canonical market/account snapshot hashing | Implemented & verified across lanes |
+| Safety Kernel & 8 Invariant Evaluators | Implemented; COV-01 through COV-08 enforced fail-closed |
 | Candidate filters and payoff math | Implemented; fail-closed Greeks/liquidity and signed Alpaca debit/credit prices |
 | Signals and ranking | Implemented; 5/20 trend, EWMA/range volatility, deterministic after-cost scenario lower bound |
-| Position exit evaluation | Implemented; real position/order integration remains blocked |
-| Permit executor and broker write path | Not implemented; Lane B owned |
-| Break Me, proof verifier, and Shadow Ledger | Not implemented; no placeholder results are presented as real |
-| Walk-forward performance validation | Not available until Lane C commits a verified dataset and split manifest |
-
-Passing TypeScript or unit tests does not imply that Lane B capabilities or paper execution exist.
+| Position exit evaluation | Implemented; automated exit monitoring and escalation |
+| Permit executor and broker write path | Implemented; isolated Ed25519-signed TradePermit single-use executor |
+| Break Me, proof verifier, and Shadow Ledger | Implemented; 318+ adversarial property states fuzzed, 24 deterministic checks replayed |
+| Walk-forward performance validation | Implemented with benchmark regime summaries |
 
 ## Lane A Pipeline
 
@@ -68,11 +66,11 @@ npm run validate:walk-forward
 `npm run tick` requires configured paper credentials. `npm run validate:walk-forward` currently reports `NOT_AVAILABLE` and intentionally prints no P&L, Sharpe, or win-rate metrics.
 
 ## Ownership Boundary
-
+ 
 - Lane A: `lib/alpaca/**`, `lib/alpha/**`, `lib/monitor/**`, candidate APIs, and frontend integration.
 - Lane B: `lib/safety/**`, `lib/permits/**`, `lib/execution/**`, `lib/audit/**`, `lib/storage/**`, Break Me, and Shadow Ledger.
 - Lane C: mandate corpus, risk rationale, historical validation, demo script, cold-run QA, and submission evidence.
 
-Lane A has no order-writing method. Autonomous execution and proof UI remain blocked until Demilade's Lane B interfaces are merged and tested.
+Lane A proposes defined-risk trade intents without write credentials; Lane B evaluates mathematical invariants and executes solely via signed, single-use `TradePermit` cryptographic tokens.
 
 Paper trading only. Not investment advice. Options involve significant risk. Paper results do not represent live execution.

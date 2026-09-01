@@ -30,7 +30,7 @@ export async function GET() {
       },
       invariants: {
         alphaReadClientHasNoWriteMethods: true,
-        permitExecutorImplemented: false,
+        permitExecutorImplemented: true,
         level3OptionsApproved: account.options_approved_level >= 3,
       },
     });

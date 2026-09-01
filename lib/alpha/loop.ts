@@ -11,6 +11,7 @@ import { reconcileForTick } from "@/lib/safety/session-store";
 import type { CovenantEvent, MarketClock, OpenPosition } from "@/types/domain";
 import { computeAccountSnapshotHash, computeMarketSnapshotHash } from "@/lib/hashes";
 import { profileLimits, toPolicyUnits } from "@/lib/mandates/profiles";
+import { toOpenPositions } from "@/lib/safety/position-risk";
 
 export interface TickResult {
   timestamp: string;
@@ -107,16 +108,24 @@ export const defaultActivePolicy: Policy = {
 /**
  * Open positions in the shape the kernel needs.
  *
- * An empty broker position list is a fact we can assert, so it maps to [].
- * A non-empty one is not: deriving `structure` and `standaloneMaxLoss` back
- * out of raw legs is not yet implemented, and guessing would understate risk
- * in COV-03. So we return undefined, COV-03/06/07 abstain, and the dashboard
- * says why. That is the correct failure until the mapping lands.
+ * Reconstructing a defined-risk envelope from raw legs is real arithmetic, so
+ * it lives in lib/safety/position-risk.ts. An empty book maps to []. A book
+ * with one position we cannot price maps to undefined, which makes COV-03,
+ * COV-06 and COV-07 abstain — a partial list would let the portfolio-heat sum
+ * authorise risk it could not see.
  */
-function toOpenPositions(monitor: PositionMonitorResult | undefined): OpenPosition[] | undefined {
-  if (monitor === undefined) return undefined;
-  if (monitor.summary.total === 0) return [];
-  return undefined;
+function openPositionsForKernel(
+  monitor: PositionMonitorResult | undefined,
+  now: string
+): { positions: OpenPosition[] | undefined; unresolved: string[] } {
+  if (monitor === undefined) return { positions: undefined, unresolved: [] };
+  if (monitor.summary.total === 0) return { positions: [], unresolved: [] };
+
+  const states = monitor.positions.map((entry) => entry.position);
+  const mapped = toOpenPositions(states, now);
+  return "positions" in mapped
+    ? { positions: mapped.positions, unresolved: [] }
+    : { positions: undefined, unresolved: mapped.unresolved };
 }
 
 /**
@@ -159,6 +168,9 @@ export async function executeTick(
     // undefined makes COV-03/06/07 abstain, which is the correct outcome.
   }
 
+  const observedAt = new Date().toISOString();
+  const openBook = openPositionsForKernel(positionMonitor, observedAt);
+
   const equityNumber = Number(baseAccount.equity);
   const dayPnlNumber = Number(baseAccount.dailyUnrealizedPnl);
   const enrichedAccount: AccountSnapshot = {
@@ -168,7 +180,7 @@ export async function executeTick(
         ? (dayPnlNumber / equityNumber) * 100
         : undefined,
     tradingBlocked: baseAccount.status.toUpperCase() !== "ACTIVE",
-    openPositions: toOpenPositions(positionMonitor),
+    openPositions: openBook.positions,
     snapshotHash: ""
   };
   const accountSnapshot: AccountSnapshot = {

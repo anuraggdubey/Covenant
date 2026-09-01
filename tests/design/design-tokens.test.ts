@@ -95,15 +95,20 @@ describe("DESIGN.md matches app/globals.css", () => {
     expect(undocumented).toEqual([]);
   });
 
-  it("defines every colour in dark mode too", () => {
-    const dark = /prefers-color-scheme:\s*dark[\s\S]*?\{([\s\S]*?)\n\s{2}\}/.exec(cssSource);
-    expect(dark).not.toBeNull();
+  it("is dark by default — light is the override, not the other way round", () => {
+    const root = /:root\s*\{([\s\S]*?)\}/.exec(cssSource);
+    expect(root![1]).toMatch(/color-scheme:\s*dark/);
+  });
+
+  it("defines every colour in the light palette too", () => {
+    const light = /prefers-color-scheme:\s*light[\s\S]*?\{([\s\S]*?)\n\s{2}\}/.exec(cssSource);
+    expect(light).not.toBeNull();
 
     // Surfaces, text and state all have to flip. Anything defined in only one
-    // scheme is a bug waiting for a judge on a dark laptop.
+    // scheme is a bug waiting for a judge on the other setting.
     const mustFlip = ["surface", "text", "accent", "success", "warning", "danger", "border"];
     for (const name of mustFlip) {
-      expect(dark![1], `--${name} has no dark-mode value`).toContain(`--${name}:`);
+      expect(light![1], `--${name} has no light-mode value`).toContain(`--${name}:`);
     }
   });
 });

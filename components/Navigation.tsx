@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CovenantMark } from "@/components/CovenantMark";
 
 const PRIMARY_ROUTES = [
   { label: "Overview", path: "/" },
@@ -19,18 +20,11 @@ const SECONDARY_ROUTES = [
 ];
 
 function Mark() {
+  // The covalent mark: two nuclei, and the lens they share is the bond.
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" className="brand-mark">
-      <rect x="2.5" y="2.5" width="23" height="23" rx="7" fill="var(--accent)" />
-      <path
-        d="M9 14.4 12.2 17.6 19.4 10.4"
-        fill="none"
-        stroke="var(--surface)"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <span className="brand-mark" style={{ color: "var(--accent)" }}>
+      <CovenantMark size={26} />
+    </span>
   );
 }
 

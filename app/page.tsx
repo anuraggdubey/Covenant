@@ -6,8 +6,13 @@ import { AuthorityBoundary } from "@/components/AuthorityBoundary";
 
 interface HealthData {
   status: string;
-  mode: string;
-  alpaca: {
+  mode?: string;
+  /**
+   * Absent whenever the health check degrades — which is exactly the state a
+   * judge opening the deployed app without credentials lands in. Optional,
+   * because the API genuinely omits it and the page must render anyway.
+   */
+  alpaca?: {
     connected: boolean;
     marketOpen: boolean;
     optionsApprovedLevel: number;
@@ -91,8 +96,8 @@ export default function OverviewPage() {
       .catch(() => setHealth(null));
   }, []);
 
-  const connected = health?.status === "healthy" && health.alpaca.connected;
-  const marketOpen = health?.alpaca.marketOpen ?? false;
+  const connected = health?.status === "healthy" && health.alpaca?.connected === true;
+  const marketOpen = health?.alpaca?.marketOpen ?? false;
 
   return (
     <div className="landing-page">
@@ -199,7 +204,7 @@ export default function OverviewPage() {
       <section className="trust-strip" aria-label="Platform status">
         <div>
           <span>Paper equity</span>
-          <strong>{formatEquity(health?.alpaca.equity)}</strong>
+          <strong>{formatEquity(health?.alpaca?.equity)}</strong>
         </div>
         <div>
           <span>Market status</span>
@@ -210,12 +215,19 @@ export default function OverviewPage() {
         <div>
           <span>Broker connection</span>
           <strong className={connected ? "success-text" : "warning-text"}>
-            {connected ? "Connected" : "Paper mode"}
+            {connected ? "Connected" : health === null ? "Unreachable" : "Not configured"}
           </strong>
         </div>
         <div>
           <span>Options level</span>
-          <strong>Level {health?.alpaca.optionsApprovedLevel ?? 3}</strong>
+          {/* Never default this to 3. Claiming an approval we have not read
+              back from the broker is exactly the kind of unverified assertion
+              this whole product exists to refuse. */}
+          <strong className={health?.alpaca === undefined ? "warning-text" : undefined}>
+            {health?.alpaca === undefined
+              ? "Unverified"
+              : `Level ${health.alpaca.optionsApprovedLevel}`}
+          </strong>
         </div>
       </section>
 

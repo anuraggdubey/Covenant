@@ -6,25 +6,25 @@ description: >-
   trading terminal. Every token below is live in app/globals.css and is
   enforced by tests/design/design-tokens.test.ts.
 colors:
-  surface: "#ffffff"
-  surface-subtle: "#f7f8fa"
-  surface-sunken: "#f0f2f5"
-  border: "#e4e7ec"
-  border-strong: "#d0d5dd"
-  text: "#0c111d"
-  text-secondary: "#475467"
-  text-muted: "#8b95a5"
-  accent: "#1652f0"
-  accent-hover: "#0f43cc"
-  accent-subtle: "#eef3ff"
-  success: "#067647"
-  success-subtle: "#ecfdf3"
-  warning: "#b54708"
-  warning-subtle: "#fffaeb"
-  danger: "#b42318"
-  danger-subtle: "#fef3f2"
-  info: "#5925dc"
-  info-subtle: "#f4f3ff"
+  surface: "#101114"
+  surface-subtle: "#0a0b0d"
+  surface-sunken: "#16181d"
+  border: "#1e2027"
+  border-strong: "#2b2e37"
+  text: "#f4f4f5"
+  text-secondary: "#a1a1aa"
+  text-muted: "#71717a"
+  accent: "#7c5cff"
+  accent-hover: "#9478ff"
+  accent-subtle: "#17142b"
+  success: "#3ecf8e"
+  success-subtle: "#0d1f18"
+  warning: "#f5a524"
+  warning-subtle: "#241a0c"
+  danger: "#f4626c"
+  danger-subtle: "#2a1416"
+  info: "#22b8cf"
+  info-subtle: "#0c1e22"
 typography:
   h1:
     fontFamily: Inter
@@ -91,15 +91,24 @@ Covenant is a proof surface for a system whose entire pitch is restraint. It
 refuses trades, bounds its own authority, and hands you evidence. The interface
 has to look like it means that.
 
-So the reference points are **Coinbase** (calm surfaces, one accent, crisp data
-tables), **Ledger** (precision, high contrast, monospace for cryptographic
-material), and **Google/Material** (type hierarchy, functional colour). Not a
-trading terminal. No glow, no glassmorphism, no gradient used as decoration.
+Three references, and what each is actually for:
 
-The argument is aesthetic as well as practical: a page that looks careful
-supports a claim about being careful. A neon dashboard undercuts the sentence
-"this agent can prove it never exceeded its mandate" no matter how true that
-sentence is.
+- **Cursor** (Ryo Lu) — restraint. Hairline borders, almost no elevation, and
+  micro-typography doing the work that colour does in a weaker design.
+- **Monad** — conviction. A near-black canvas, one saturated accent, and
+  display type set large with tight tracking.
+- **LI.FI** — air. Generous spacing, so a dense evidence table still breathes.
+- **Ledger** — monospace for anything cryptographic.
+
+**Dark is the default, not a toggle.** This is an audit console read next to a
+terminal. The light palette exists and is complete, but it is the override.
+
+The violet accent is a deliberate move away from fintech blue. In a field
+where a dozen agents shipped the same blue dashboard, looking different is
+not vanity — it is the first signal that the thinking underneath is different
+too. And a page that looks careful supports a claim about being careful: neon
+would undercut "this agent can prove it never exceeded its mandate" no matter
+how true that sentence is.
 
 **Every token in the front matter above is live in `app/globals.css`.** A test
 fails if the two drift apart, so this file is not documentation that rots — it
@@ -111,20 +120,23 @@ One accent. Everything else is either surface, text, or state. If you find
 yourself reaching for a colour that is not below, the answer is almost always a
 neutral.
 
-- **accent (#1652f0):** the only non-state colour. Links, active nav, primary
-  buttons, and monospace field names. Use it sparingly enough that it still
-  means "this is interactive or this is the key value".
-- **success (#067647) / warning (#b54708) / danger (#b42318):** deliberately
-  desaturated next to the accent. These map to decisions, not moods — success
+- **accent (#7c5cff):** the only non-state colour. Links, active nav, primary
+  buttons, and the logo mark. Use it sparingly enough that it still means
+  "this is interactive, or this is the key value".
+- **success / warning / danger:** these map to decisions, not moods — success
   is `APPROVE`, warning is `SHRINK` or `ABSTAIN`, danger is `VETO` or a failed
   check. Never use them for emphasis.
-- **info (#5925dc):** reserved for `RECORDED` provenance labels.
-- **text-muted (#8b95a5):** labels, timestamps, hashes at rest. If a whole
-  block is muted, ask whether it should be on the page at all.
-- **surface-sunken (#f0f2f5):** code blocks, table hovers, inset panels.
+- **info (#22b8cf):** reserved for `RECORDED` provenance labels, so a captured
+  fact never wears the same colour as a reproduced one.
+- **surface / surface-subtle:** the canvas is the DARKEST surface and cards
+  lift a step above it. That inversion is what stops a dark theme reading as a
+  light theme with the lights off.
+- **text-muted:** labels, timestamps, hashes at rest. If a whole block is
+  muted, ask whether it should be on the page at all.
 
-Dark mode redefines every one of these under `prefers-color-scheme: dark`. No
-colour is defined in only one scheme.
+The light palette redefines every one of these under
+`@media (prefers-color-scheme: light)`. No colour is defined in only one
+scheme.
 
 ## Typography
 
@@ -154,7 +166,7 @@ for section kickers and table headers, never for body copy.
 Two levels, and that is the whole system:
 
 - `--shadow-sm` on `.glass-panel` — every ordinary card.
-- `--shadow` + `--border-strong` on `.glass-panel-glow` — reserved for the ONE
+- `--shadow` plus `--border-strong` on `.glass-panel-glow` — reserved for the ONE
   panel per page carrying the headline claim.
 
 If everything is elevated, nothing is. Resist adding a third level.

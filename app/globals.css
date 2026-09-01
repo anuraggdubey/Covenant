@@ -1,60 +1,71 @@
 /*
- * Covenant design system — Coinbase-inspired precision & restraint.
+ * Covenant design system — dark-first, precision over decoration.
  *
- * References: Coinbase (calm light surfaces, crisp data tables, one accent),
- * Ledger (high contrast, monospace for cryptographic material),
- * Google/Material (type hierarchy, functional colour).
+ * References, and what each is actually for:
+ *   Cursor (Ryo Lu)  — restraint. Hairline borders, almost no elevation,
+ *                      micro-typography doing the work instead of colour.
+ *   Monad            — conviction. Near-black canvas, one saturated accent,
+ *                      display type set large and tight.
+ *   LI.FI            — air. Generous spacing so dense data still breathes.
+ *   Ledger           — monospace for anything cryptographic.
+ *
+ * Dark is the DEFAULT, not an afterthought: this is an audit console read
+ * next to a terminal, and the violet accent is a deliberate move away from
+ * the fintech blue every other agent in this field shipped.
+ *
+ * Every token below is documented in DESIGN.md and checked by
+ * tests/design/design-tokens.test.ts. Change both, or neither.
  */
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 
-  /* Surfaces */
-  --surface: #ffffff;
-  --surface-subtle: #f7f8fa;
-  --surface-sunken: #f0f2f5;
-  --surface-inverse: #0c111d;
+  /* Surfaces — canvas is darkest, cards lift a step */
+  --surface: #101114;
+  --surface-subtle: #0a0b0d;
+  --surface-sunken: #16181d;
+  --surface-inverse: #ffffff;
 
-  /* Borders */
-  --border: #e4e7ec;
-  --border-strong: #d0d5dd;
+  /* Borders — hairline, never decorative */
+  --border: #1e2027;
+  --border-strong: #2b2e37;
 
   /* Text */
-  --text: #0c111d;
-  --text-secondary: #475467;
-  --text-muted: #8b95a5;
+  --text: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
 
-  /* One accent (Coinbase Blue / Covenant Primary) */
-  --accent: #1652f0;
-  --accent-hover: #0f43cc;
-  --accent-subtle: #eef3ff;
+  /* One accent. Violet, not blue. */
+  --accent: #7c5cff;
+  --accent-hover: #9478ff;
+  --accent-subtle: #17142b;
 
-  /* Semantic state */
-  --success: #067647;
-  --success-subtle: #ecfdf3;
-  --warning: #b54708;
-  --warning-subtle: #fffaeb;
-  --danger: #b42318;
-  --danger-subtle: #fef3f2;
-  --info: #5925dc;
-  --info-subtle: #f4f3ff;
+  /* Semantic state — decisions, never emphasis */
+  --success: #3ecf8e;
+  --success-subtle: #0d1f18;
+  --warning: #f5a524;
+  --warning-subtle: #241a0c;
+  --danger: #f4626c;
+  --danger-subtle: #2a1416;
+  --info: #22b8cf;
+  --info-subtle: #0c1e22;
 
   --radius: 10px;
   --radius-sm: 6px;
-  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.05);
-  --shadow: 0 4px 12px -2px rgb(16 24 40 / 0.08), 0 2px 4px -2px rgb(16 24 40 / 0.04);
-  --shadow-lg: 0 12px 28px -4px rgb(16 24 40 / 0.12), 0 4px 8px -2px rgb(16 24 40 / 0.06);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow: 0 4px 16px -4px rgb(0 0 0 / 0.55);
+  --shadow-lg: 0 16px 40px -8px rgb(0 0 0 / 0.65);
 
   --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
     "Liberation Mono", monospace;
 
-  /* Legacy aliases */
+  /* Legacy aliases — eight pages still reference these. */
   --bg-dark: var(--surface-subtle);
   --bg-panel: var(--surface);
   --bg-card: var(--surface);
-  --bg-card-hover: var(--surface-subtle);
+  --bg-card-hover: var(--surface-sunken);
   --border-subtle: var(--border);
   --border-glow: var(--border-strong);
   --border-emerald: var(--border-strong);
@@ -68,40 +79,38 @@
   --purple: var(--info);
 }
 
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: light) {
   :root {
-    color-scheme: dark;
+    color-scheme: light;
 
-    --surface: #12161f;
-    --surface-subtle: #0b0e14;
-    --surface-sunken: #171c26;
-    --surface-inverse: #ffffff;
+    --surface: #ffffff;
+    --surface-subtle: #fafafa;
+    --surface-sunken: #f4f4f5;
+    --surface-inverse: #09090b;
 
-    --border: #232936;
-    --border-strong: #333b4a;
+    --border: #e4e4e7;
+    --border-strong: #d4d4d8;
 
-    --text: #f2f4f7;
-    --text-secondary: #98a2b3;
-    --text-muted: #667085;
+    --text: #09090b;
+    --text-secondary: #52525b;
+    --text-muted: #71717a;
 
-    --accent: #6690ff;
-    --accent-hover: #85a6ff;
-    --accent-subtle: #131c33;
+    --accent: #6338f5;
+    --accent-hover: #5028d8;
+    --accent-subtle: #f1edff;
 
-    --success: #47cd89;
-    --success-subtle: #0d1f18;
-    --warning: #f79009;
-    --warning-subtle: #241a0c;
-    --danger: #f97066;
-    --danger-subtle: #2a1615;
-    --info: #a48afb;
-    --info-subtle: #1c1730;
+    --success: #067647;
+    --success-subtle: #ecfdf3;
+    --warning: #b54708;
+    --warning-subtle: #fffaeb;
+    --danger: #b42318;
+    --danger-subtle: #fef3f2;
+    --info: #0e7490;
+    --info-subtle: #ecfeff;
 
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
-    --shadow: 0 4px 12px -2px rgb(0 0 0 / 0.4);
-    --shadow-lg: 0 12px 28px -4px rgb(0 0 0 / 0.5);
-
-    --bg-dark: var(--surface-subtle);
+    --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.05);
+    --shadow: 0 4px 12px -2px rgb(16 24 40 / 0.08);
+    --shadow-lg: 0 12px 28px -4px rgb(16 24 40 / 0.12);
   }
 }
 

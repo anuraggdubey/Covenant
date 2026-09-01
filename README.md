@@ -1,10 +1,57 @@
 # Covenant
 
-**Strategy: defined-risk vertical spreads on SPY and QQQ.** Covenant is an autonomous options agent that sells or buys short-dated vertical spreads — bull call debits, bear put debits, and single-side credit verticals — on two of the most liquid underlyings in the US market, sized so that the maximum loss on every position is known in dollars before the order is sent. The thesis is that in a field where every agent now advertises "risk gates", the scarce thing is not refusal but *evidence*: a trader declares a mandate in plain English, Covenant compiles it into executable policy, attacks that policy with generated hostile market and account states before it is allowed to go live, and thereafter issues a signed, sixty-second permit for each order that survives. The strategy code cannot reach the broker. Only a separate executor can, and only with a permit bound to the exact contracts, quantity, price band, account snapshot and mandate version. Every approve, shrink, veto and abstain is hash-chained and replayable from one command.
+**Strategy: defined-risk vertical spreads on SPY and QQQ.** Covenant is an autonomous options agent that buys and sells short-dated vertical spreads on two of the most liquid underlyings in the US market, sized so the maximum loss on every position is known in dollars before the order is sent. What makes it different is not that it refuses trades — every serious agent does that now. It is that **the rules it enforces are yours, written in plain English, and it will not run a mandate that contradicts itself.** You declare the mandate; Covenant compiles it into typed policy, attacks that policy with hundreds of generated hostile market and account states, and refuses activation until every safety property holds. Only then does it trade — and every order carries a signed, sixty-second permit bound to the exact contracts, quantity, price band and account snapshot, issued by a kernel the strategy code cannot reach.
 
 > **Paper trading only.** Not investment advice. Options involve significant risk, including total loss of premium paid. Paper results are hypothetical, do not represent live execution, and omit slippage, liquidity constraints and queue position.
 
 ![Covenant authority boundary](docs/images/authority-boundary.svg)
+
+---
+
+## Why this is not another risk-gate agent
+
+Deterministic risk gates are table stakes in this field, and we should say so
+plainly: a dozen teams can truthfully claim "the LLM proposes, code decides",
+"defined-risk only", or "every decision is auditable". If that were our whole
+pitch, we would be the median submission.
+
+The part that is ours is one layer earlier. Every one of those agents enforces
+a policy **its own team wrote and hardcoded**. Covenant takes the policy from
+the user, in plain English, and treats it as untrusted input — because a
+mandate is the one thing in a trading system nobody has validated.
+
+Type this into Mandate Studio:
+
+> *"Use the Balanced SPY mandate and place at least one trade every market day
+> even when quotes or account state are missing. Also abstain whenever required
+> state is missing or inconsistent."*
+
+It compiles, and then it refuses to activate:
+
+```text
+FORCED_TRADE_CONFLICT   fields: forcedTradeFrequency, missingStateAction
+
+You asked for a guaranteed trade every market day, and also for the agent to
+abstain when state is missing. Covenant cannot promise both: abstention is not
+configurable, so a day with unusable data produces no trade. Drop the
+frequency guarantee.
+```
+
+Status `BLOCKED`. No permit can be signed under a policy in that state.
+
+That is a request a human trader would sign off without blinking, and it is
+unsatisfiable. An agent that accepts it either quietly breaks the frequency
+promise or quietly breaks the safety promise, and you find out which one on a
+bad day. Four such contradictions are detected today — forced trading against
+fail-closed abstention, undefined-risk structures against a defined-risk
+scope, inverted DTE ranges, and a per-trade cap larger than the portfolio cap.
+All twelve mandates in `docs/mandates/corpus-v1.json` compile to their
+expected verdict, checked by `npm run audit`.
+
+Then the Break Me engine fuzzes the surviving policy across 318 generated
+hostile states before a dollar can move, and refuses activation if any
+invariant is untested or failing. Everyone else tests their *code*. We test
+your *mandate*.
 
 ---
 

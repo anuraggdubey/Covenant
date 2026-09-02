@@ -12,9 +12,9 @@ export function PipelineVisual() {
 
     // Safe wrapper: framer-motion's animate() throws when querySelectorAll
     // returns null (element not in DOM). This silently swallows that error.
-    const safeAnimate = async (...args: Parameters<typeof animate>) => {
+    const safeAnimate = async (...args: any[]) => {
       try {
-        return await animate(...args);
+        return await (animate as any)(...args);
       } catch {
         // Element not mounted yet or already unmounted — skip gracefully
       }

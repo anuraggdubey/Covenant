@@ -24,7 +24,6 @@ import {
 import type { CovenantEvent, RunManifest } from "@/types/domain";
 import type { VerificationReport } from "@/lib/audit/verify";
 import manifestFallback from "@/demo/run_manifest.json";
-import { verifyManifest } from "@/lib/audit/verify";
 
 interface ProofSourceSummary {
   id: string;
@@ -79,8 +78,6 @@ export default function ProofExplorerPage() {
   const [checkFilter, setCheckFilter] = useState<"ALL" | "REPRODUCED" | "RECORDED">("ALL");
   const [searchCheck, setSearchCheck] = useState("");
 
-  const fallbackReport = verifyManifest(manifestFallback as unknown as RunManifest);
-
   const fetchSourcesAndProof = async (sourceId: string) => {
     setLoading(true);
     try {
@@ -99,20 +96,10 @@ export default function ProofExplorerPage() {
         const proofData: ProofPayload = await proofRes.json();
         setProof(proofData);
       } else {
-        setProof({
-          source: { id: "demo", kind: "DEMO", label: "Committed demo manifest", runId: "covenant-demo-run-1", createdAt: new Date().toISOString(), eventCount: (manifestFallback as unknown as RunManifest).events.length },
-          manifest: manifestFallback as unknown as RunManifest,
-          report: fallbackReport,
-          notes: ["Reproduced from demo/run_manifest.json — no credentials, no network."]
-        });
+        setProof(null);
       }
     } catch {
-      setProof({
-        source: { id: "demo", kind: "DEMO", label: "Committed demo manifest", runId: "covenant-demo-run-1", createdAt: new Date().toISOString(), eventCount: (manifestFallback as unknown as RunManifest).events.length },
-        manifest: manifestFallback as unknown as RunManifest,
-        report: fallbackReport,
-        notes: ["Offline local fallback"]
-      });
+      setProof(null);
     } finally {
       setLoading(false);
     }
@@ -122,13 +109,13 @@ export default function ProofExplorerPage() {
     fetchSourcesAndProof(selectedSourceId);
   }, [selectedSourceId]);
 
-  const activeReport = proof?.report ?? fallbackReport;
-  const activeManifest = proof?.manifest ?? (manifestFallback as unknown as RunManifest);
+  const activeReport = proof?.report;
+  const activeManifest = proof?.manifest;
 
-  const reproducedChecks = activeReport.checks.filter((c) => c.label === "REPRODUCED");
-  const recordedChecks = activeReport.checks.filter((c) => c.label === "RECORDED");
+  const reproducedChecks = activeReport?.checks.filter((c) => c.label === "REPRODUCED") ?? [];
+  const recordedChecks = activeReport?.checks.filter((c) => c.label === "RECORDED") ?? [];
 
-  const filteredChecks = activeReport.checks.filter((c) => {
+  const filteredChecks = (activeReport?.checks ?? []).filter((c) => {
     if (checkFilter === "REPRODUCED" && c.label !== "REPRODUCED") return false;
     if (checkFilter === "RECORDED" && c.label !== "RECORDED") return false;
     if (searchCheck.trim()) {
@@ -157,6 +144,17 @@ export default function ProofExplorerPage() {
     hidden: { y: 15, opacity: 0 },
     visible: { y: 0, opacity: 1, transition: { duration: 0.4 } }
   };
+
+  if (loading || !activeReport || !activeManifest) {
+    return (
+      <div className="flex-1 w-full bg-[#F0EFE3] min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4 text-[#74736A] font-mono text-xs uppercase tracking-widest">
+          <RefreshCw className="w-6 h-6 animate-spin text-[#0B4FFF]" />
+          Loading proof manifest...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 w-full bg-[#F0EFE3] min-h-screen">

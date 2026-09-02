@@ -31,8 +31,8 @@ export function Navigation() {
   }, []);
 
   return (
-    <header className="relative w-full bg-[#F0EFE3] border-b border-black/10">
-      <div className="max-w-[1400px] mx-auto px-6 flex items-center justify-between h-[56px]">
+    <header className="relative z-50 bg-[#F0EFE3] border-t-4 border-[#0B4FFF]">
+      <div className="max-w-[1400px] mx-auto px-6 flex items-center justify-between h-[76px]">
         
         {/* Left: Boxed Logo (matching reference style) */}
         <Link 

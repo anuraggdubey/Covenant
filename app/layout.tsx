@@ -48,7 +48,6 @@ export default function RootLayout({
 
         {/* Content layers */}
         <Navigation />
-        <MarqueeTicker />
         <main className="flex-1 flex flex-col relative z-10">{children}</main>
       </body>
     </html>

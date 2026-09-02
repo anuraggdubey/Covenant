@@ -72,7 +72,7 @@ export default function OverviewPage() {
     <div className="flex-1 w-full overflow-hidden bg-[#F0EFE3]">
       
       {/* 1. PIPELINE VISUAL (First section, exactly like Auxia) */}
-      <section className="pt-24 pb-8 w-full border-b border-black/5 bg-[#F0EFE3]">
+      <section className="pt-4 pb-0 w-full bg-[#F0EFE3]">
         <PipelineVisual />
       </section>
 
@@ -81,7 +81,7 @@ export default function OverviewPage() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="max-w-[1400px] mx-auto px-6 pt-16 pb-12 md:pt-24 md:pb-16 flex flex-col items-start text-left"
+        className="max-w-[1500px] mx-auto px-6 pt-0 pb-8 md:pt-4 md:pb-12 flex flex-col items-start text-left"
       >
         <motion.h1 
           variants={itemVariants}

@@ -130,9 +130,7 @@ async function buildUnderlyingLab(
     readClient.isMockMode() ? "synthetic" : readClient.getOptionFeed(),
     clock.timestamp
   );
-  const candidates = generateCandidates(marketSnapshot, labPolicy, 1, {
-    observation: !clock.is_open
-  });
+  const candidates = generateCandidates(marketSnapshot, labPolicy, 1);
   const impliedVolatilities = Object.values(marketSnapshot.contracts)
     .map((contract) => contract.impliedVolatility)
     .filter((value): value is number => value !== undefined && Number.isFinite(value));

@@ -15,6 +15,7 @@ import {
   Play,
   RefreshCw,
   ShieldCheck,
+  XCircle,
   Zap,
 } from "lucide-react";
 import {
@@ -69,6 +70,26 @@ interface Health {
   alpaca?: { marketOpen: boolean; equity: string };
 }
 
+interface PermitSummary {
+  permitId: string;
+  symbol: string;
+  structure: string;
+  quantity: number;
+  maxLoss: string;
+  createdAt: string;
+  expiresAt: string;
+  lifecycle: "SIGNED" | "USED" | "EXPIRED";
+  execution: "HELD" | "SUBMITTED" | "BROKER_ERROR" | "REJECTED" | "UNKNOWN";
+  orderId: string | null;
+}
+
+interface ToastNotification {
+  id: string;
+  tone: "success" | "error" | "info";
+  title: string;
+  message: string;
+}
+
 const REFRESH_MS = 10_000;
 
 function decisionBadge(decision: string | undefined) {
@@ -88,12 +109,38 @@ function decisionBadge(decision: string | undefined) {
 export default function ExecutionPage() {
   const [history, setHistory] = useState<History | null>(null);
   const [health, setHealth] = useState<Health | null>(null);
+  const [permits, setPermits] = useState<PermitSummary[]>([]);
+  const [selectedPermitId, setSelectedPermitId] = useState<string | null>(null);
+  const [tickingId, setTickingId] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<ToastNotification[]>([]);
   const [running, setRunning] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [lastDurationMs, setLastDurationMs] = useState<number | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [inspectData, setInspectData] = useState<HashInspectorData | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const pushToast = useCallback((tone: "success" | "error" | "info", title: string, message: string) => {
+    const id = Math.random().toString(36).slice(2);
+    setToasts((prev) => [...prev, { id, tone, title, message }]);
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 6000);
+  }, []);
+
+  const loadPermits = useCallback(async () => {
+    try {
+      const res = await fetch("/api/permits");
+      if (res.ok) {
+        const body = (await res.json()) as { permits?: PermitSummary[] };
+        if (Array.isArray(body.permits)) {
+          setPermits(body.permits);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -103,10 +150,37 @@ export default function ExecutionPage() {
       ]);
       setHistory((await historyResponse.json()) as History);
       setHealth((await healthResponse.json()) as Health);
+      await loadPermits();
     } catch {
       /* leave the last good state on screen rather than blanking it */
     }
-  }, []);
+  }, [loadPermits]);
+
+  const tickPermit = async (permitId: string) => {
+    setTickingId(permitId);
+    try {
+      const res = await fetch(`/api/permits/${permitId}/execute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.message || "Failed to tick permit.");
+
+      pushToast(
+        "success",
+        "Permit Ticked",
+        data.permit?.orderId
+          ? `Paper order #${data.permit.orderId} submitted to Alpaca.`
+          : "Permit consumed and recorded."
+      );
+      await load();
+    } catch (err) {
+      pushToast("error", "Tick Failed", err instanceof Error ? err.message : "Failed to execute permit.");
+    } finally {
+      setTickingId(null);
+    }
+  };
 
   const runTick = useCallback(async () => {
     setRunning(true);
@@ -115,15 +189,22 @@ export default function ExecutionPage() {
       const response = await fetch("/api/tick/run", { method: "POST" });
       const body = (await response.json()) as { ok: boolean; error?: string; durationMs?: number };
       setLastDurationMs(body.durationMs ?? null);
-      if (!body.ok) setLastError(body.error ?? "Tick failed.");
-      else setLastError(null);
+      if (!body.ok) {
+        setLastError(body.error ?? "Tick failed.");
+        pushToast("error", "Tick Failed", body.error ?? "Autonomous cycle failed.");
+      } else {
+        setLastError(null);
+        pushToast("success", "Tick Completed", `Autonomous cycle finished in ${body.durationMs ?? 0}ms.`);
+      }
       await load();
     } catch (error) {
-      setLastError(error instanceof Error ? error.message : "Tick request failed.");
+      const msg = error instanceof Error ? error.message : "Tick request failed.";
+      setLastError(msg);
+      pushToast("error", "Tick Failed", msg);
     } finally {
       setRunning(false);
     }
-  }, [load]);
+  }, [load, pushToast]);
 
   useEffect(() => {
     void load();
@@ -314,6 +395,119 @@ export default function ExecutionPage() {
               COVENANT_LIVE_SUBMIT gate
             </span>
           </div>
+        </motion.div>
+
+        {/* Signed Permits Queue & Tick Status */}
+        <motion.div variants={itemVariants} className="border border-black/15 bg-white overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/15 bg-[#FAF9F5] px-6 py-4">
+            <div>
+              <p className="font-mono text-[10px] font-bold tracking-[0.12em] text-[#74736A]">
+                01 · SIGNED PERMITS QUEUE & TICK STATUS
+              </p>
+              <h2 className="text-lg font-semibold text-[#232323] mt-0.5">
+                Authority Dispatch Queue
+              </h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-mono text-[#74736A]">
+                {permits.filter((p) => p.lifecycle === "SIGNED" && p.execution !== "SUBMITTED").length} Pending Tick
+              </span>
+              <button
+                onClick={() => void loadPermits()}
+                className="inline-flex h-8 w-8 items-center justify-center border border-black/15 bg-white text-[#232323] hover:bg-[#F7F6EF] cursor-pointer"
+                title="Refresh permits"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {permits.length === 0 ? (
+            <div className="p-8 text-center text-xs font-mono text-[#74736A]">
+              No signed permits yet. Go to <Link href="/permits" className="text-[#0B4FFF] underline font-bold">Permit Console</Link> to prepare and sign a 60-second trade permit.
+            </div>
+          ) : (
+            <div className="divide-y divide-black/10 max-h-[380px] overflow-y-auto">
+              {permits.map((p) => {
+                const isTicked = p.lifecycle === "USED" || p.execution === "SUBMITTED";
+                const isPending = p.lifecycle === "SIGNED" && p.execution !== "SUBMITTED";
+                const isExpired = p.lifecycle === "EXPIRED";
+                const isSelected = selectedPermitId === p.permitId;
+
+                return (
+                  <div
+                    key={p.permitId}
+                    onClick={() => setSelectedPermitId(p.permitId)}
+                    className={`p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors cursor-pointer ${
+                      isSelected ? "bg-[#F5F7FF] border-l-4 border-l-[#0B4FFF]" : "hover:bg-[#FAF9F5]"
+                    }`}
+                  >
+                    <div className="flex items-start md:items-center gap-3">
+                      <div className="shrink-0 mt-0.5 md:mt-0">
+                        {isTicked ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-emerald-50 text-emerald-800 border border-emerald-800/30">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            TICKED
+                          </span>
+                        ) : isPending ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-amber-50 text-amber-900 border border-amber-800/30 animate-pulse">
+                            <Clock3 className="w-3 h-3 text-amber-700" />
+                            PENDING TICK
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-rose-50 text-rose-800 border border-rose-800/30">
+                            EXPIRED
+                          </span>
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="text-sm font-bold font-mono text-[#232323]">
+                          {p.symbol} {p.structure.replaceAll("_", " ")}
+                          <span className="ml-2 font-normal text-xs text-[#74736A]">{p.quantity}x contract(s)</span>
+                        </div>
+                        <div className="text-[11px] font-mono text-[#74736A] mt-0.5">
+                          Permit ID: <span className="text-[#232323]">{p.permitId.slice(0, 16)}...</span> · Max Loss: ${p.maxLoss}
+                          {p.orderId && <span className="ml-2 text-emerald-700 font-bold">· Order: #{p.orderId.slice(0, 14)}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-[10px] font-mono text-[#74736A]">
+                        Issued: {new Date(p.createdAt).toLocaleTimeString()}
+                      </span>
+
+                      {isPending && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void tickPermit(p.permitId);
+                          }}
+                          disabled={tickingId === p.permitId}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0B4FFF] hover:bg-[#093ED9] text-white text-xs font-mono font-bold uppercase transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          <Play className="w-3 h-3 fill-current" />
+                          {tickingId === p.permitId ? "Submitting Tick..." : "Tick / Execute Permit"}
+                        </button>
+                      )}
+
+                      {isTicked && (
+                        <Link
+                          href="/shadow-ledger"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-mono text-[#0B4FFF] hover:underline"
+                        >
+                          View in Ledger <ArrowRight className="w-3 h-3" />
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </motion.div>
 
         {/* Latest Tick Section */}
@@ -573,6 +767,38 @@ export default function ExecutionPage() {
 
       {/* Cryptographic Inspector Modal */}
       <HashInspectorModal data={inspectData} onClose={() => setInspectData(null)} />
+
+      {/* Floating Small Toast Stack in Top-Left Corner */}
+      <div className="fixed top-5 left-5 z-[100] flex flex-col gap-2 max-w-xs w-full pointer-events-none">
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className={`pointer-events-auto shadow-xl border p-2.5 flex items-start justify-between gap-2.5 transition-all duration-300 font-mono text-[11px] ${
+              t.tone === "success"
+                ? "bg-[#142A20] text-emerald-100 border-emerald-500/40"
+                : t.tone === "error"
+                ? "bg-[#331111] text-rose-100 border-rose-500/40"
+                : "bg-[#232323] text-white border-black/20"
+            }`}
+          >
+            <div className="flex items-start gap-2">
+              {t.tone === "success" && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />}
+              {t.tone === "error" && <CircleAlert className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />}
+              <div>
+                <div className="font-bold text-[11px] uppercase tracking-wider">{t.title}</div>
+                <div className="mt-0.5 text-[10px] opacity-90 leading-tight break-words">{t.message}</div>
+              </div>
+            </div>
+            <button
+              onClick={() => setToasts((prev) => prev.filter((item) => item.id !== t.id))}
+              className="text-white/60 hover:text-white shrink-0 ml-1.5"
+              aria-label="Dismiss toast"
+            >
+              <XCircle className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

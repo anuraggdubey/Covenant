@@ -587,12 +587,12 @@ export default function PermitsPage() {
         </div>
       )}
 
-      {/* Floating Modern Toast Stack in Bottom-Right Corner */}
-      <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2.5 max-w-md w-full pointer-events-none px-4">
+      {/* Floating Small Toast Stack in Top-Left Corner */}
+      <div className="fixed top-5 left-5 z-[100] flex flex-col gap-2 max-w-xs w-full pointer-events-none">
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`pointer-events-auto shadow-2xl border p-4 flex items-start justify-between gap-3 transition-all duration-300 font-mono text-xs ${
+            className={`pointer-events-auto shadow-xl border p-2.5 flex items-start justify-between gap-2.5 transition-all duration-300 font-mono text-[11px] ${
               t.tone === "success"
                 ? "bg-[#142A20] text-emerald-100 border-emerald-500/40"
                 : t.tone === "error"
@@ -600,20 +600,20 @@ export default function PermitsPage() {
                 : "bg-[#232323] text-white border-black/20"
             }`}
           >
-            <div className="flex items-start gap-2.5">
-              {t.tone === "success" && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />}
-              {t.tone === "error" && <CircleAlert className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />}
+            <div className="flex items-start gap-2">
+              {t.tone === "success" && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />}
+              {t.tone === "error" && <CircleAlert className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />}
               <div>
-                <div className="font-bold text-xs uppercase tracking-wider">{t.title}</div>
-                <div className="mt-1 text-[11px] opacity-90 leading-relaxed break-words">{t.message}</div>
+                <div className="font-bold text-[11px] uppercase tracking-wider">{t.title}</div>
+                <div className="mt-0.5 text-[10px] opacity-90 leading-tight break-words">{t.message}</div>
               </div>
             </div>
             <button
               onClick={() => setToasts((prev) => prev.filter((item) => item.id !== t.id))}
-              className="text-white/60 hover:text-white shrink-0 ml-2"
+              className="text-white/60 hover:text-white shrink-0 ml-1.5"
               aria-label="Dismiss toast"
             >
-              <XCircle className="w-4 h-4" />
+              <XCircle className="w-3.5 h-3.5" />
             </button>
           </div>
         ))}

@@ -499,12 +499,17 @@ export default function OverviewPage() {
               Turn every execution into mathematical certainty.
             </h2>
             <div className="flex flex-wrap gap-4">
-              <button className="bg-white text-[#0B4FFF] px-8 py-4 rounded-xl font-medium text-lg hover:bg-white/90 transition-colors">
+              <Link href="/mandates" className="bg-white text-[#0B4FFF] px-8 py-4 rounded-xl font-medium text-lg hover:bg-white/90 transition-colors">
                 Start Compilation
-              </button>
-              <button className="bg-black/20 text-white px-8 py-4 rounded-xl font-medium text-lg backdrop-blur-sm hover:bg-black/30 transition-colors border border-white/10">
-                Read the Documentation
-              </button>
+              </Link>
+              <a
+                href="https://github.com/anuraggdubey/Covenant"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-black/20 text-white px-8 py-4 rounded-xl font-medium text-lg backdrop-blur-sm hover:bg-black/30 transition-colors border border-white/10 inline-flex items-center gap-2"
+              >
+                Read the Documentation ↗
+              </a>
             </div>
           </div>
 
@@ -546,33 +551,61 @@ export default function OverviewPage() {
                 © 2026 COVENANT. ALL RIGHTS RESERVED.
               </div>
               <div className="flex gap-4">
-                <Link href="#" className="hover:text-white transition-colors">Terms</Link>
+                <Link href="/mandates" className="hover:text-white transition-colors">Mandates</Link>
                 <span>•</span>
-                <Link href="#" className="hover:text-white transition-colors">Privacy</Link>
+                <Link href="/permits" className="hover:text-white transition-colors">Permits</Link>
               </div>
             </div>
 
             <div className="flex flex-col gap-6">
-              <span className="text-xs uppercase tracking-widest font-bold text-white/50">Company</span>
+              <span className="text-xs uppercase tracking-widest font-bold text-white/50">Social & Connect</span>
               <div className="flex flex-col gap-4 text-base">
-                <Link href="#" className="hover:text-white transition-colors">LinkedIn</Link>
-                <Link href="#" className="hover:text-white transition-colors">Twitter / X</Link>
+                <a
+                  href="https://www.linkedin.com/in/anurag-dubey-407435349/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  LinkedIn ↗
+                </a>
+                <a
+                  href="https://x.com/anuraggdubeyy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  Twitter / X (@anuraggdubeyy) ↗
+                </a>
               </div>
             </div>
 
             <div className="flex flex-col gap-6">
-              <span className="text-xs uppercase tracking-widest font-bold text-white/50">Product</span>
+              <span className="text-xs uppercase tracking-widest font-bold text-white/50">Product & Code</span>
               <div className="flex flex-col gap-4 text-base">
-                <Link href="#" className="hover:text-white transition-colors">Documentation</Link>
-                <Link href="#" className="hover:text-white transition-colors">GitHub</Link>
+                <a
+                  href="https://github.com/anuraggdubey/Covenant"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  Documentation ↗
+                </a>
+                <a
+                  href="https://github.com/anuraggdubey/Covenant"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  GitHub Repository ↗
+                </a>
               </div>
             </div>
 
             <div className="flex flex-col gap-6">
-              <span className="text-xs uppercase tracking-widest font-bold text-white/50">Resources</span>
+              <span className="text-xs uppercase tracking-widest font-bold text-white/50">Surfaces</span>
               <div className="flex flex-col gap-4 text-base">
-                <Link href="#" className="hover:text-white transition-colors">Blog</Link>
-                <Link href="#" className="hover:text-white transition-colors">hello@covenant.trade</Link>
+                <Link href="/candidates" className="hover:text-white transition-colors">Candidate Lab</Link>
+                <Link href="/execution" className="hover:text-white transition-colors">Execution Loop</Link>
               </div>
             </div>
           </div>

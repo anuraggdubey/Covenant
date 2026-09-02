@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface FooterLink {
   label: string;
@@ -41,6 +44,9 @@ const FOOTER_GROUPS: FooterGroup[] = [
 ];
 
 export function SiteFooter() {
+  const pathname = usePathname();
+  if (pathname === "/") return null;
+
   return (
     <footer className="bg-[#F0EFE3] border-t border-black/5 mt-32">
       <div className="max-w-[1400px] mx-auto px-6 py-16">

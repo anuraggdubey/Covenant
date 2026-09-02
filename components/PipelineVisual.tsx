@@ -10,10 +10,20 @@ export function PipelineVisual() {
   useEffect(() => {
     let isCancelled = false;
 
+    // Safe wrapper: framer-motion's animate() throws when querySelectorAll
+    // returns null (element not in DOM). This silently swallows that error.
+    const safeAnimate = async (...args: Parameters<typeof animate>) => {
+      try {
+        return await animate(...args);
+      } catch {
+        // Element not mounted yet or already unmounted — skip gracefully
+      }
+    };
+
     const runSequence = async () => {
       if (isCancelled) return;
       // 1. Initial State (reset)
-      await animate([
+      await safeAnimate([
         [".blue-line-mask", { clipPath: "inset(0% 100% 0% 0%)" }, { duration: 0 }],
         [".tag-wrap", { width: 0, opacity: 0 }, { duration: 0 }],
         [".tag-pill", { backgroundColor: "#F0EFE3", borderColor: "#E2E1D3" }, { duration: 0 }],
@@ -31,54 +41,54 @@ export function PipelineVisual() {
 
       // 2. Phase 1: Draw Line & Expand Tags Synced
       // The line wipes from 100% inset to 0% inset taking 1.6s
-      animate(".blue-line-mask", { clipPath: "inset(0% 0% 0% 0%)" }, { duration: 1.6, ease: "linear" });
+      safeAnimate(".blue-line-mask", { clipPath: "inset(0% 0% 0% 0%)" }, { duration: 1.6, ease: "linear" });
       
       // Expand the pills exactly as the line passes them (staggered by 0.4s)
-      animate(".tag-pill", { 
+      safeAnimate(".tag-pill", { 
         backgroundColor: "#DCE1EB", // Solid grey/blue bg like Auxia
         borderColor: "#DCE1EB" // Remove border effect
       }, { duration: 0.4, delay: stagger(0.4) });
-      animate(".tag-icon", { color: "#0B4FFF" }, { duration: 0.4, delay: stagger(0.4) });
-      animate(".tag-text", { color: "#232323" }, { duration: 0.4, delay: stagger(0.4) });
+      safeAnimate(".tag-icon", { color: "#0B4FFF" }, { duration: 0.4, delay: stagger(0.4) });
+      safeAnimate(".tag-text", { color: "#232323" }, { duration: 0.4, delay: stagger(0.4) });
       
-      await animate(".tag-wrap", { width: "auto", opacity: 1 }, { duration: 0.4, delay: stagger(0.4), ease: "easeOut" });
+      await safeAnimate(".tag-wrap", { width: "auto", opacity: 1 }, { duration: 0.4, delay: stagger(0.4), ease: "easeOut" });
 
       if (isCancelled) return;
 
       // 4. Phase 3: Reveal Cards
-      await animate(".step-card", { y: 0, opacity: 1, filter: "blur(0px)" }, { duration: 0.8, delay: stagger(0.15), ease: "easeOut" });
+      await safeAnimate(".step-card", { y: 0, opacity: 1, filter: "blur(0px)" }, { duration: 0.8, delay: stagger(0.15), ease: "easeOut" });
 
       if (isCancelled) return;
 
       // 5. Phase 4: Inner Content Sequence
-      await animate(".card-inner-item", { y: 0, opacity: 1 }, { duration: 0.4, delay: stagger(0.1) });
+      await safeAnimate(".card-inner-item", { y: 0, opacity: 1 }, { duration: 0.4, delay: stagger(0.1) });
 
       if (isCancelled) return;
 
       // Card 2 Sequence (Alpha)
-      await animate(".alpha-item-1", { color: "#232323" }, { duration: 0.3 });
-      animate(".alpha-spin-1", { opacity: 0, display: "none" }, { duration: 0.1 });
-      await animate(".alpha-check-1", { opacity: 1, display: "block", color: "#0B4FFF" }, { duration: 0.2 });
+      await safeAnimate(".alpha-item-1", { color: "#232323" }, { duration: 0.3 });
+      safeAnimate(".alpha-spin-1", { opacity: 0, display: "none" }, { duration: 0.1 });
+      await safeAnimate(".alpha-check-1", { opacity: 1, display: "block", color: "#0B4FFF" }, { duration: 0.2 });
 
-      await animate(".alpha-item-2", { color: "#232323" }, { duration: 0.3 });
-      animate(".alpha-spin-2", { opacity: 0, display: "none" }, { duration: 0.1 });
-      await animate(".alpha-check-2", { opacity: 1, display: "block", color: "#0B4FFF" }, { duration: 0.2 });
+      await safeAnimate(".alpha-item-2", { color: "#232323" }, { duration: 0.3 });
+      safeAnimate(".alpha-spin-2", { opacity: 0, display: "none" }, { duration: 0.1 });
+      await safeAnimate(".alpha-check-2", { opacity: 1, display: "block", color: "#0B4FFF" }, { duration: 0.2 });
 
-      await animate(".alpha-item-3", { color: "#232323" }, { duration: 0.3 });
-      animate(".alpha-spin-3", { opacity: 0, display: "none" }, { duration: 0.1 });
-      await animate(".alpha-check-3", { opacity: 1, display: "block", color: "#0B4FFF" }, { duration: 0.2 });
+      await safeAnimate(".alpha-item-3", { color: "#232323" }, { duration: 0.3 });
+      safeAnimate(".alpha-spin-3", { opacity: 0, display: "none" }, { duration: 0.1 });
+      await safeAnimate(".alpha-check-3", { opacity: 1, display: "block", color: "#0B4FFF" }, { duration: 0.2 });
 
       if (isCancelled) return;
 
       // Card 3 Sequence (Kernel)
-      await animate(".verify-item-1", { color: "#232323" }, { duration: 0.3, delay: 0.2 });
-      await animate(".verify-item-2", { color: "#0B4FFF" }, { duration: 0.3, delay: 0.2 });
+      await safeAnimate(".verify-item-1", { color: "#232323" }, { duration: 0.3, delay: 0.2 });
+      await safeAnimate(".verify-item-2", { color: "#0B4FFF" }, { duration: 0.3, delay: 0.2 });
 
       if (isCancelled) return;
 
       // Card 4 Sequence (Executor Flash)
-      await animate(".execute-flash", { opacity: 1, scale: 1 }, { duration: 0.6, ease: "easeOut" });
-      await animate(".execute-text", { opacity: 1, y: 0 }, { duration: 0.4, ease: "easeOut" });
+      await safeAnimate(".execute-flash", { opacity: 1, scale: 1 }, { duration: 0.6, ease: "easeOut" });
+      await safeAnimate(".execute-text", { opacity: 1, y: 0 }, { duration: 0.4, ease: "easeOut" });
 
       if (isCancelled) return;
 
@@ -88,12 +98,12 @@ export function PipelineVisual() {
       if (isCancelled) return;
 
       // 7. Phase 6: Outro (Reverse)
-      animate(".step-card", { y: 32, opacity: 0, filter: "blur(5px)" }, { duration: 0.5, delay: stagger(0.1) });
-      animate(".tag-pill", { backgroundColor: "#F0EFE3", borderColor: "#E2E1D3" }, { duration: 0.5 });
-      animate(".tag-icon", { color: "#a1a1aa" }, { duration: 0.5 });
-      animate(".tag-text", { color: "#a1a1aa" }, { duration: 0.5 });
-      animate(".tag-wrap", { width: 0, opacity: 0 }, { duration: 0.5 });
-      await animate(".blue-line-mask", { clipPath: "inset(0% 100% 0% 0%)" }, { duration: 0.6, delay: 0.3, ease: "easeIn" });
+      safeAnimate(".step-card", { y: 32, opacity: 0, filter: "blur(5px)" }, { duration: 0.5, delay: stagger(0.1) });
+      safeAnimate(".tag-pill", { backgroundColor: "#F0EFE3", borderColor: "#E2E1D3" }, { duration: 0.5 });
+      safeAnimate(".tag-icon", { color: "#a1a1aa" }, { duration: 0.5 });
+      safeAnimate(".tag-text", { color: "#a1a1aa" }, { duration: 0.5 });
+      safeAnimate(".tag-wrap", { width: 0, opacity: 0 }, { duration: 0.5 });
+      await safeAnimate(".blue-line-mask", { clipPath: "inset(0% 100% 0% 0%)" }, { duration: 0.6, delay: 0.3, ease: "easeIn" });
 
       if (!isCancelled) {
         runSequence(); // Loop

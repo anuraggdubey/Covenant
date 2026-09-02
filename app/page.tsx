@@ -325,64 +325,64 @@ export default function OverviewPage() {
                 <div key={set} className="flex items-stretch gap-6 pr-6">
                   
                   {/* Card 1 */}
-                  <div className="w-[350px] md:w-[450px] lg:w-[600px] shrink-0 bg-white border border-black/15 p-8 md:p-12 flex flex-col justify-between group hover:bg-[#EAEEDD] transition-colors duration-300 min-h-[420px]">
+                  <div className="w-[350px] md:w-[450px] lg:w-[600px] shrink-0 bg-[#FAF9F5] rounded-[24px] p-8 md:p-12 flex flex-col justify-between group hover:bg-[#0B4FFF] hover:shadow-[0_12px_40px_-12px_rgba(11,79,255,0.3)] transition-all duration-300 min-h-[420px]">
                     <div className="flex flex-col lg:flex-row gap-6 items-start justify-between">
                       {/* Logo-styled typography */}
-                      <div className="text-[32px] font-serif italic font-bold text-[#232323] leading-none lg:w-[40%]">
+                      <div className="text-[32px] font-serif italic font-bold text-[#232323] group-hover:text-white transition-colors duration-300 leading-none lg:w-[40%]">
                         Quant<br/>Fund
                       </div>
-                      <p className="text-[15px] lg:text-[16px] leading-relaxed text-[#74736A] lg:w-[60%]">
+                      <p className="text-[15px] lg:text-[16px] leading-relaxed text-[#74736A] group-hover:text-white/90 transition-colors duration-300 lg:w-[60%]">
                         Automating delta-neutral derivatives strategies while enforcing strict margin invariants across fragmented execution venues.
                       </p>
                     </div>
                     <div className="mt-16">
-                      <h3 className="text-[70px] lg:text-[100px] font-medium leading-[0.9] text-[#232323] tracking-[-0.04em]">
+                      <h3 className="text-[70px] lg:text-[100px] font-medium leading-[0.9] text-[#232323] group-hover:text-white transition-colors duration-300 tracking-[-0.04em]">
                         $4.2B+
                       </h3>
-                      <p className="text-[17px] text-[#232323] font-medium mt-3">
+                      <p className="text-[17px] text-[#232323] group-hover:text-white/90 transition-colors duration-300 font-medium mt-3">
                         monthly executed volume
                       </p>
                     </div>
                   </div>
 
                   {/* Card 2 */}
-                  <div className="w-[350px] md:w-[450px] lg:w-[600px] shrink-0 bg-white border border-black/15 p-8 md:p-12 flex flex-col justify-between group hover:bg-[#EAEEDD] transition-colors duration-300 min-h-[420px]">
+                  <div className="w-[350px] md:w-[450px] lg:w-[600px] shrink-0 bg-[#FAF9F5] rounded-[24px] p-8 md:p-12 flex flex-col justify-between group hover:bg-[#0B4FFF] hover:shadow-[0_12px_40px_-12px_rgba(11,79,255,0.3)] transition-all duration-300 min-h-[420px]">
                     <div className="flex flex-col lg:flex-row gap-6 items-start justify-between">
                       {/* Logo-styled typography */}
-                      <div className="text-[28px] font-mono font-black tracking-tighter text-[#232323] leading-none lg:w-[40%]">
+                      <div className="text-[28px] font-mono font-black tracking-tighter text-[#232323] group-hover:text-white transition-colors duration-300 leading-none lg:w-[40%]">
                         [PROP.DESK]
                       </div>
-                      <p className="text-[15px] lg:text-[16px] leading-relaxed text-[#74736A] lg:w-[60%]">
+                      <p className="text-[15px] lg:text-[16px] leading-relaxed text-[#74736A] group-hover:text-white/90 transition-colors duration-300 lg:w-[60%]">
                         Deploying high-frequency statistical arbitrage models where every execution leg is proven against account constraints before routing.
                       </p>
                     </div>
                     <div className="mt-16">
-                      <h3 className="text-[70px] lg:text-[100px] font-medium leading-[0.9] text-[#232323] tracking-[-0.04em]">
+                      <h3 className="text-[70px] lg:text-[100px] font-medium leading-[0.9] text-[#232323] group-hover:text-white transition-colors duration-300 tracking-[-0.04em]">
                         250M+
                       </h3>
-                      <p className="text-[17px] text-[#232323] font-medium mt-3">
+                      <p className="text-[17px] text-[#232323] group-hover:text-white/90 transition-colors duration-300 font-medium mt-3">
                         invariants verified daily
                       </p>
                     </div>
                   </div>
 
                   {/* Card 3 */}
-                  <div className="w-[350px] md:w-[450px] lg:w-[600px] shrink-0 bg-white border border-black/15 p-8 md:p-12 flex flex-col justify-between group hover:bg-[#EAEEDD] transition-colors duration-300 min-h-[420px]">
+                  <div className="w-[350px] md:w-[450px] lg:w-[600px] shrink-0 bg-[#FAF9F5] rounded-[24px] p-8 md:p-12 flex flex-col justify-between group hover:bg-[#0B4FFF] hover:shadow-[0_12px_40px_-12px_rgba(11,79,255,0.3)] transition-all duration-300 min-h-[420px]">
                     <div className="flex flex-col lg:flex-row gap-6 items-start justify-between">
                       {/* Logo-styled typography */}
-                      <div className="text-[24px] font-sans font-black tracking-[0.1em] uppercase text-[#232323] leading-none lg:w-[40%] flex items-start gap-2">
+                      <div className="text-[24px] font-sans font-black tracking-[0.1em] uppercase text-[#232323] group-hover:text-white transition-colors duration-300 leading-none lg:w-[40%] flex items-start gap-2">
                         <svg className="w-8 h-8 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                         RETAIL<br/>SYND.
                       </div>
-                      <p className="text-[15px] lg:text-[16px] leading-relaxed text-[#74736A] lg:w-[60%]">
+                      <p className="text-[15px] lg:text-[16px] leading-relaxed text-[#74736A] group-hover:text-white/90 transition-colors duration-300 lg:w-[60%]">
                         Retail developers safely deploying complex multi-leg options strategies through Covenant's cryptographic permit architecture.
                       </p>
                     </div>
                     <div className="mt-16">
-                      <h3 className="text-[70px] lg:text-[100px] font-medium leading-[0.9] text-[#232323] tracking-[-0.04em]">
+                      <h3 className="text-[70px] lg:text-[100px] font-medium leading-[0.9] text-[#232323] group-hover:text-white transition-colors duration-300 tracking-[-0.04em]">
                         0
                       </h3>
-                      <p className="text-[17px] text-[#232323] font-medium mt-3">
+                      <p className="text-[17px] text-[#232323] group-hover:text-white/90 transition-colors duration-300 font-medium mt-3">
                         margin call liquidations
                       </p>
                     </div>
@@ -403,7 +403,7 @@ export default function OverviewPage() {
         viewport={{ once: false }}
         className="max-w-[1400px] mx-auto px-6 mb-32"
       >
-        <div className="bg-[#EAEEDD] border border-black/15 p-12">
+        <div className="bg-[#FAF9F5] rounded-[32px] hover:bg-[#0B4FFF] hover:shadow-[0_12px_40px_-12px_rgba(11,79,255,0.3)] transition-all duration-300 p-12 group cursor-default">
           <motion.div 
             initial="hidden"
             whileInView="visible"
@@ -421,12 +421,12 @@ export default function OverviewPage() {
               }}
               className="flex flex-col gap-4"
             >
-              <ShieldCheck className="w-8 h-8 text-[#0B4FFF]" />
-              <h4 className="text-[#74736A] text-xs font-mono uppercase tracking-widest font-bold">Policy invariants</h4>
-              <p className="text-5xl font-bold text-[#232323] tracking-tight flex items-baseline gap-1">
+              <ShieldCheck className="w-8 h-8 text-[#0B4FFF] group-hover:text-white transition-colors duration-300" />
+              <h4 className="text-[#74736A] group-hover:text-white/80 transition-colors duration-300 text-xs font-mono uppercase tracking-widest font-bold">Policy invariants</h4>
+              <p className="text-5xl font-bold text-[#232323] group-hover:text-white transition-colors duration-300 tracking-tight flex items-baseline gap-1">
                 <CountUp end={8} />
               </p>
-              <p className="text-[#74736A] text-sm">COV-01 through COV-08 enforced before a permit exists</p>
+              <p className="text-[#74736A] group-hover:text-white/90 transition-colors duration-300 text-sm">COV-01 through COV-08 enforced before a permit exists</p>
             </motion.div>
             
             <motion.div 
@@ -436,12 +436,12 @@ export default function OverviewPage() {
               }}
               className="flex flex-col gap-4"
             >
-              <Zap className="w-8 h-8 text-[#0B4FFF]" />
-              <h4 className="text-[#74736A] text-xs font-mono uppercase tracking-widest font-bold">Permit TTL</h4>
-              <p className="text-5xl font-bold text-[#232323] tracking-tight flex items-baseline gap-1">
+              <Zap className="w-8 h-8 text-[#0B4FFF] group-hover:text-white transition-colors duration-300" />
+              <h4 className="text-[#74736A] group-hover:text-white/80 transition-colors duration-300 text-xs font-mono uppercase tracking-widest font-bold">Permit TTL</h4>
+              <p className="text-5xl font-bold text-[#232323] group-hover:text-white transition-colors duration-300 tracking-tight flex items-baseline gap-1">
                 <CountUp end={60} suffix="s" />
               </p>
-              <p className="text-[#74736A] text-sm">Single-use Ed25519 authorization bound to exact legs</p>
+              <p className="text-[#74736A] group-hover:text-white/90 transition-colors duration-300 text-sm">Single-use Ed25519 authorization bound to exact legs</p>
             </motion.div>
             
             <motion.div 
@@ -451,12 +451,12 @@ export default function OverviewPage() {
               }}
               className="flex flex-col gap-4"
             >
-              <Layers className="w-8 h-8 text-[#0B4FFF]" />
-              <h4 className="text-[#74736A] text-xs font-mono uppercase tracking-widest font-bold">Broker keys in alpha</h4>
-              <p className="text-5xl font-bold text-[#232323] tracking-tight flex items-baseline gap-1">
+              <Layers className="w-8 h-8 text-[#0B4FFF] group-hover:text-white transition-colors duration-300" />
+              <h4 className="text-[#74736A] group-hover:text-white/80 transition-colors duration-300 text-xs font-mono uppercase tracking-widest font-bold">Broker keys in alpha</h4>
+              <p className="text-5xl font-bold text-[#232323] group-hover:text-white transition-colors duration-300 tracking-tight flex items-baseline gap-1">
                 <CountUp end={0} />
               </p>
-              <p className="text-[#74736A] text-sm">Strategy can draft, shrink, veto, or explain only</p>
+              <p className="text-[#74736A] group-hover:text-white/90 transition-colors duration-300 text-sm">Strategy can draft, shrink, veto, or explain only</p>
             </motion.div>
           </motion.div>
         </div>

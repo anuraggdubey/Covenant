@@ -1,0 +1,135 @@
+<svg width="1200" height="1150" viewBox="0 0 1200 1150" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="plate-shadow" x="-25%" y="-25%" width="150%" height="170%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="22" stdDeviation="18" flood-color="#0C111D" flood-opacity="0.14"/>
+    </filter>
+    <filter id="tile-shadow" x="-30%" y="-30%" width="160%" height="180%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="7" flood-color="#0C111D" flood-opacity="0.16"/>
+    </filter>
+    <pattern id="grid-dark" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M24 0H0V24" stroke="#FFFFFF" stroke-opacity="0.045" stroke-width="1"/>
+    </pattern>
+    <pattern id="grid-blue" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M24 0H0V24" stroke="#FFFFFF" stroke-opacity="0.07" stroke-width="1"/>
+    </pattern>
+    <style>
+      .sans { font-family: Inter, Arial, sans-serif; }
+      .mono { font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; }
+      .layer-title { font: 700 24px Inter, Arial, sans-serif; letter-spacing: 0.06em; }
+      .eyebrow { font: 600 11px "IBM Plex Mono", Consolas, monospace; letter-spacing: 0.12em; }
+      .tile-title { font: 700 16px Inter, Arial, sans-serif; }
+      .tile-meta { font: 500 10px "IBM Plex Mono", Consolas, monospace; letter-spacing: 0.06em; }
+    </style>
+  </defs>
+
+  <!-- Permit executor -->
+  <g transform="matrix(0.866 0.5 -0.866 0.5 530 600)" filter="url(#plate-shadow)">
+    <rect width="720" height="340" rx="28" fill="#F8F7F2" stroke="#D9DCE3" stroke-width="2"/>
+    <path d="M0 294H720" stroke="#D9DCE3"/>
+    <text x="34" y="316" class="layer-title" fill="#0C111D">PERMIT EXECUTOR</text>
+    <text x="682" y="316" text-anchor="end" class="eyebrow" fill="#667085">SIGNED / SINGLE-USE</text>
+
+    <g filter="url(#tile-shadow)">
+      <rect x="34" y="44" width="210" height="190" rx="18" fill="#FFFFFF" stroke="#D0D5DD"/>
+      <text x="54" y="72" class="eyebrow" fill="#1652F0">TRADE PERMIT</text>
+      <text x="54" y="105" class="tile-title" fill="#101828">SPY 590 / 595</text>
+      <text x="54" y="127" class="tile-meta" fill="#667085">CALL VERTICAL · QTY 1</text>
+      <path d="M54 154H222M54 178H184M54 202H204" stroke="#D0D5DD" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="211" cy="202" r="13" fill="#ECFDF3" stroke="#067647"/>
+      <path d="M205 202L209 206L217 197" stroke="#067647" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <path d="M274 140H346" stroke="#1652F0" stroke-width="4" stroke-linecap="round"/>
+    <path d="M337 130L347 140L337 150" stroke="#1652F0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <g filter="url(#tile-shadow)">
+      <rect x="365" y="81" width="104" height="118" rx="18" fill="#EEF3FF" stroke="#1652F0"/>
+      <path d="M417 106L447 118V141C447 160 434 174 417 181C400 174 387 160 387 141V118L417 106Z" fill="#1652F0"/>
+      <path d="M403 142L413 152L432 130" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="417" y="190" text-anchor="middle" class="tile-meta" fill="#1652F0">VERIFY</text>
+    </g>
+    <path d="M490 140H550" stroke="#1652F0" stroke-width="4" stroke-linecap="round"/>
+    <path d="M541 130L551 140L541 150" stroke="#1652F0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <g filter="url(#tile-shadow)">
+      <rect x="568" y="44" width="118" height="190" rx="18" fill="#FFFFFF" stroke="#D0D5DD"/>
+      <text x="627" y="72" text-anchor="middle" class="eyebrow" fill="#667085">PAPER</text>
+      <rect x="591" y="98" width="72" height="65" rx="10" fill="#EEF3FF" stroke="#1652F0" stroke-width="2"/>
+      <path d="M607 119H647M607 132H637M607 145H644" stroke="#1652F0" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="627" cy="196" r="8" fill="#067647"/>
+      <text x="642" y="200" class="tile-meta" fill="#067647">SENT</text>
+    </g>
+  </g>
+
+  <!-- Safety kernel -->
+  <g transform="matrix(0.866 0.5 -0.866 0.5 530 335)" filter="url(#plate-shadow)">
+    <rect width="720" height="340" rx="28" fill="#1652F0" stroke="#0F43CC" stroke-width="2"/>
+    <rect width="720" height="340" rx="28" fill="url(#grid-blue)"/>
+    <path d="M0 294H720" stroke="#FFFFFF" stroke-opacity="0.24"/>
+    <text x="34" y="316" class="layer-title" fill="#FFFFFF">SAFETY KERNEL</text>
+    <text x="682" y="316" text-anchor="end" class="eyebrow" fill="#DCE6FF">8 DETERMINISTIC GATES</text>
+
+    <g stroke="#AFC6FF" stroke-width="2">
+      <path d="M151 94L322 151M151 151L322 151M151 208L322 151"/>
+      <path d="M569 94L398 151M569 151L398 151M569 208L398 151"/>
+      <path d="M246 62L338 129M246 240L338 173M474 62L382 129M474 240L382 173"/>
+    </g>
+
+    <g filter="url(#tile-shadow)">
+      <path d="M360 87L423 112V157C423 201 395 228 360 242C325 228 297 201 297 157V112L360 87Z" fill="#FFFFFF"/>
+      <path d="M360 106L405 124V157C405 188 386 208 360 220C334 208 315 188 315 157V124L360 106Z" fill="#1652F0"/>
+      <path d="M337 160L352 175L385 140" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <g class="mono" font-size="11" font-weight="600" text-anchor="middle">
+      <g><rect x="92" y="74" width="118" height="40" rx="10" fill="#0F43CC" stroke="#6E9BFF"/><text x="151" y="99" fill="#FFFFFF">COV-01 · PASS</text></g>
+      <g><rect x="92" y="131" width="118" height="40" rx="10" fill="#0F43CC" stroke="#6E9BFF"/><text x="151" y="156" fill="#FFFFFF">COV-02 · PASS</text></g>
+      <g><rect x="92" y="188" width="118" height="40" rx="10" fill="#0F43CC" stroke="#6E9BFF"/><text x="151" y="213" fill="#FFFFFF">COV-03 · PASS</text></g>
+      <g><rect x="187" y="42" width="118" height="40" rx="10" fill="#0F43CC" stroke="#6E9BFF"/><text x="246" y="67" fill="#FFFFFF">COV-04 · PASS</text></g>
+      <g><rect x="187" y="220" width="118" height="40" rx="10" fill="#0F43CC" stroke="#6E9BFF"/><text x="246" y="245" fill="#FFFFFF">COV-05 · PASS</text></g>
+      <g><rect x="510" y="74" width="118" height="40" rx="10" fill="#0F43CC" stroke="#6E9BFF"/><text x="569" y="99" fill="#FFFFFF">COV-06 · PASS</text></g>
+      <g><rect x="510" y="131" width="118" height="40" rx="10" fill="#0F43CC" stroke="#6E9BFF"/><text x="569" y="156" fill="#FFFFFF">COV-07 · PASS</text></g>
+      <g><rect x="510" y="188" width="118" height="40" rx="10" fill="#0F43CC" stroke="#6E9BFF"/><text x="569" y="213" fill="#FFFFFF">COV-08 · PASS</text></g>
+    </g>
+  </g>
+
+  <!-- Alpha engine -->
+  <g transform="matrix(0.866 0.5 -0.866 0.5 530 70)" filter="url(#plate-shadow)">
+    <rect width="720" height="340" rx="28" fill="#101828" stroke="#344054" stroke-width="2"/>
+    <rect width="720" height="340" rx="28" fill="url(#grid-dark)"/>
+    <path d="M0 294H720" stroke="#FFFFFF" stroke-opacity="0.14"/>
+    <text x="34" y="316" class="layer-title" fill="#FFFFFF">ALPHA ENGINE</text>
+    <text x="682" y="316" text-anchor="end" class="eyebrow" fill="#98A2B3">MARKET DATA → INTENT</text>
+
+    <g filter="url(#tile-shadow)">
+      <rect x="34" y="50" width="126" height="88" rx="14" fill="#1D2939" stroke="#475467"/>
+      <text x="50" y="77" class="tile-title" fill="#FFFFFF">SPY</text>
+      <text x="144" y="77" text-anchor="end" class="tile-meta" fill="#6CE9A6">+0.42%</text>
+      <path d="M50 114L67 103L84 109L104 88L123 96L144 82" stroke="#4E80EE" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+      <rect x="34" y="156" width="126" height="88" rx="14" fill="#1D2939" stroke="#475467"/>
+      <text x="50" y="183" class="tile-title" fill="#FFFFFF">QQQ</text>
+      <text x="144" y="183" text-anchor="end" class="tile-meta" fill="#6CE9A6">+0.31%</text>
+      <path d="M50 220L68 216L85 201L103 207L122 186L144 192" stroke="#4E80EE" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+      <rect x="180" y="50" width="160" height="194" rx="14" fill="#1D2939" stroke="#475467"/>
+      <text x="198" y="78" class="eyebrow" fill="#98A2B3">OPTION CHAIN</text>
+      <path d="M198 103H322M198 131H322M198 159H322M198 187H322M198 215H322" stroke="#475467"/>
+      <path d="M239 94V226M280 94V226" stroke="#475467"/>
+      <circle cx="219" cy="117" r="5" fill="#6CE9A6"/><circle cx="260" cy="145" r="5" fill="#6CE9A6"/><circle cx="301" cy="173" r="5" fill="#FDB022"/><circle cx="260" cy="201" r="5" fill="#6CE9A6"/>
+    </g>
+
+    <path d="M365 147H430" stroke="#4E80EE" stroke-width="4" stroke-linecap="round"/>
+    <path d="M421 137L431 147L421 157" stroke="#4E80EE" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <g filter="url(#tile-shadow)">
+      <rect x="449" y="50" width="237" height="194" rx="18" fill="#FFFFFF"/>
+      <text x="469" y="79" class="eyebrow" fill="#1652F0">TOP CANDIDATE</text>
+      <text x="469" y="115" class="tile-title" fill="#101828">SPY CALL VERTICAL</text>
+      <text x="469" y="140" class="tile-meta" fill="#667085">590 / 595 · 14 DTE · QTY 1</text>
+      <rect x="469" y="166" width="197" height="50" rx="10" fill="#EEF3FF"/>
+      <text x="485" y="187" class="tile-meta" fill="#667085">MAX LOSS</text>
+      <text x="485" y="207" class="tile-title" fill="#1652F0">$240.00</text>
+      <circle cx="646" cy="191" r="9" fill="#067647"/>
+    </g>
+  </g>
+</svg>

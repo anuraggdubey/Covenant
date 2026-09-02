@@ -22,10 +22,6 @@ The short version, so a cold start cannot go wrong:
 
 ## Design
 
-Read `DESIGN.md` before touching anything under `app/`, `components/`, or `app/globals.css`. It is a [DESIGN.md-format](https://github.com/google-labs-code/design.md) file: YAML tokens plus the reasoning behind them.
-
-- **Every colour token in it is live in `app/globals.css`,** and `tests/design/design-tokens.test.ts` fails if the two drift. Change both, or neither.
-- Use a token. Never a raw hex or `rgba()` in a component.
-- Hashes, permit ids, nonces and OCC symbols are always `.mono`.
-- **No background audio, music, or autoplaying video.** See the Do's and Don'ts section for why — this is a deliberate decision, not an omission.
-- No new component library, and no Tailwind. `DESIGN.md` explains why Ledger's Lumen was borrowed from rather than installed.
+The UI is built using a modern, premium, highly-animated Web3 aesthetic inspired by Auxia and Kimia.
+We use Tailwind CSS for styling, Framer Motion for fluid scroll and micro-interactions, and lucide-react for iconography.
+Glows, glassmorphism, and background gradients are explicitly authorized to create a dynamic, living interface.

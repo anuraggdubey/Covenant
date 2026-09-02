@@ -12,22 +12,6 @@ const PRIMARY_ROUTES = [
   { label: "Break Me", path: "/break-me" },
 ];
 
-const SECONDARY_ROUTES = [
-  { label: "Permits", path: "/permits" },
-  { label: "Execution", path: "/execution" },
-  { label: "Proof", path: "/proof" },
-  { label: "Shadow", path: "/shadow-ledger" },
-];
-
-function Mark() {
-  // The covalent mark: two nuclei, and the lens they share is the bond.
-  return (
-    <span className="brand-mark" style={{ color: "var(--accent)" }}>
-      <CovenantMark size={26} />
-    </span>
-  );
-}
-
 export function Navigation() {
   const pathname = usePathname();
   const [health, setHealth] = useState<{ connected: boolean; mode: string } | null>(null);
@@ -45,60 +29,60 @@ export function Navigation() {
   }, []);
 
   return (
-    <header className="site-header">
-      <div className="site-announcement">
-        <span className="announcement-track">
-          Paper trading only / Proof-carrying vertical spreads / Signed permits / Replayable decisions
-        </span>
-      </div>
-
-      <nav className="top-nav" aria-label="Main navigation">
-        <Link href="/" className="brand-link" aria-label="Covenant home">
-          <Mark />
-          <span>Covenant</span>
+    <header className="sticky top-0 z-50 bg-[#F0EFE3] border-t-4 border-[#0B4FFF]">
+      <div className="max-w-[1400px] mx-auto px-6 flex items-center justify-between h-[76px]">
+        
+        {/* Left: Logo */}
+        <Link href="/" className="flex items-center gap-2.5" aria-label="Covenant home">
+          <span className="text-[#0B4FFF]"><CovenantMark size={28} /></span>
+          <span className="text-[22px] font-medium text-[#232323] tracking-tight leading-none lowercase">covenant</span>
         </Link>
 
-        <div className="nav-center" aria-label="Core product areas">
-          {PRIMARY_ROUTES.map((route) => {
-            const isActive = pathname === route.path;
-            return (
-              <Link
-                key={route.path}
-                href={route.path}
-                className={`nav-item ${isActive ? "active" : ""}`}
-                aria-current={isActive ? "page" : undefined}
-              >
-                {route.label}
-              </Link>
-            );
-          })}
-        </div>
-
-        <div className="nav-actions">
-          <div className="nav-more" aria-label="Audit tools">
-            {SECONDARY_ROUTES.map((route) => {
+        {/* Right: Links + CTA + Status */}
+        <div className="flex items-center gap-8">
+          
+          <nav className="hidden md:flex items-center gap-7" aria-label="Main navigation">
+            {PRIMARY_ROUTES.map((route) => {
               const isActive = pathname === route.path;
               return (
                 <Link
                   key={route.path}
                   href={route.path}
-                  className={`nav-item compact ${isActive ? "active" : ""}`}
+                  className={`text-[15px] transition-colors ${
+                    isActive
+                      ? "text-[#232323] font-medium"
+                      : "text-[#74736A] hover:text-[#232323]"
+                  }`}
                   aria-current={isActive ? "page" : undefined}
                 >
                   {route.label}
                 </Link>
               );
             })}
+          </nav>
+
+          <div className="flex items-center gap-5">
+            <Link
+              href="/mandates"
+              className="bg-[#0B4FFF] hover:bg-[#093ED9] text-white text-[15px] font-medium px-6 py-2.5 rounded-full transition-all hover:shadow-[0_4px_14px_0_rgba(11,79,255,0.39)]"
+            >
+              Start
+            </Link>
+
+            <div className="w-[1px] h-6 bg-[#D1D5DB]" /> {/* Vertical Separator */}
+
+            <div className="flex items-center gap-2 text-[15px] text-[#74736A]">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  health?.connected ? "bg-emerald-500" : "bg-amber-500"
+                }`}
+              />
+              <span>{health?.connected ? "Connected" : health?.mode ?? "Paper"}</span>
+            </div>
           </div>
-          <span className="nav-status">
-            <span className={health?.connected ? "status-light connected" : "status-light"} />
-            {health?.connected ? "Connected" : health?.mode ?? "Paper mode"}
-          </span>
-          <Link href="/mandates" className="nav-cta">
-            Start
-          </Link>
+
         </div>
-      </nav>
+      </div>
     </header>
   );
 }

@@ -73,7 +73,7 @@ export interface BreakMeReport {
 }
 
 /** A perturbation the generator can apply to an otherwise-legal world. */
-type Attack =
+export type Attack =
   | "OVERSIZED_QUANTITY"
   | "STALE_QUOTE"
   | "CROSSED_MARKET"
@@ -92,7 +92,7 @@ type Attack =
   | "UNKNOWN_CONTRACT"
   | "NONE";
 
-const ATTACKS: Attack[] = [
+export const ATTACK_TYPES: Attack[] = [
   "OVERSIZED_QUANTITY",
   "STALE_QUOTE",
   "CROSSED_MARKET",
@@ -111,6 +111,29 @@ const ATTACKS: Attack[] = [
   "UNKNOWN_CONTRACT",
   "NONE"
 ];
+
+/** Human-readable labels for the attack selector in the UI. */
+export const ATTACK_LABELS: Record<Attack, string> = {
+  OVERSIZED_QUANTITY: "Oversized quantity",
+  STALE_QUOTE: "Stale quotes",
+  CROSSED_MARKET: "Crossed market (bid > ask)",
+  ILLIQUID_CONTRACT: "Zero liquidity",
+  DELTA_OUT_OF_BAND: "Delta out of band",
+  DTE_OUT_OF_BAND: "DTE out of band",
+  SESSION_DATE_MISMATCH: "Wrong session date",
+  DAILY_LOSS_BREACHED: "Daily loss breached",
+  HALTED_SESSION: "Session halted",
+  DUPLICATE_EXPOSURE: "Duplicate exposure",
+  OVERDUE_POSITION: "Overdue open position",
+  MISSING_POSITIONS: "Missing position list",
+  MISSING_CLOCK: "Missing market clock",
+  SNAPSHOT_DRIFT: "Snapshot hash drift",
+  MODEL_WIDENED: "Model widened confidence",
+  UNKNOWN_CONTRACT: "Unknown contract legs",
+  NONE: "Clean state (no attack)"
+};
+
+const ATTACKS = ATTACK_TYPES;
 
 export interface WorldFactory {
   (): {
@@ -233,7 +256,7 @@ export function applyAttack(
   return world;
 }
 
-function describe(attack: Attack, magnitude: number): string {
+export function describeAttack(attack: Attack, magnitude: number): string {
   const readable: Record<Attack, string> = {
     OVERSIZED_QUANTITY: `an order of ${1 + magnitude * 40} contracts`,
     STALE_QUOTE: "quotes older than the mandate's freshness band",
@@ -298,7 +321,7 @@ export function runBreakMe(
                 invariant: verdict.id,
                 description:
                   `${verdict.id} tried to "shrink" ${context.intent.quantity} to ` +
-                  `${String(verdict.shrinkTo)} given ${describe(attack, magnitude)}. ` +
+                  `${String(verdict.shrinkTo)} given ${describeAttack(attack, magnitude)}. ` +
                   "A shrink may only ever reduce.",
                 seed,
                 raw: { attack, magnitude }

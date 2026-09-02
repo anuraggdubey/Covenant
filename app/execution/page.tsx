@@ -1,239 +1,307 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-interface TickHistoryResponse {
-  totalTicks: number;
-  summary: {
-    intentsGenerated: number;
-    abstainDecisions: number;
-  };
-  recentTicks: Array<{
-    timestamp: string;
-    dataMode: string;
-    clock: { isOpen: boolean; timestamp: string };
-    account: { equity: string; snapshotHash: string };
-    underlyings: Array<{
-      symbol: string;
-      marketSnapshotHash?: string;
-      proposal: { intent?: { id: string; structure: string; quantity: number; limitPrice: string; standaloneMaxLoss: string; alphaScore: number; thesis: string; intentHash: string; legs: Array<{ symbol: string; positionIntent: string; ratioQty: number }> } } & { abstain?: true; reason?: string };
-    }>;
-    positionMonitor?: {
-      summary: { total: number; holdCount: number; exitCount: number; escalateCount: number };
-      positions: Array<{
-        position: { symbol: string; underlying: string; qty: number; entryPrice: string; unrealizedPnl: string; dte: number };
-        evaluation: { action: string; reason: string; shouldExit: boolean };
-      }>;
-    };
-  }>;
+interface Governance {
+  decision: string;
+  reason: string;
+  failedInvariants: string[];
+  shrunkQuantity?: number;
+  heldForOperator?: boolean;
+  permit?: { permitId: string; expiresAt: string };
+  execution?:
+    | { submitted: true; orderId: string; requestId: string }
+    | { submitted: false; code: string; reason: string };
 }
 
-interface PositionsResponse {
+interface TickUnderlying {
+  symbol: string;
+  marketSnapshotHash?: string;
+  proposal: { intent?: { quantity: number; structure: string; standaloneMaxLoss: string } } & {
+    abstain?: true;
+    reason?: string;
+  };
+  governance?: Governance;
+}
+
+interface Tick {
+  timestamp: string;
   dataMode: string;
-  marketOpen: boolean;
-  summary: { total: number; holdCount: number; exitCount: number; escalateCount: number };
-  positions: Array<{
-    position: { symbol: string; underlying: string; qty: number; entryPrice: string; currentPrice: string; unrealizedPnl: string; dte: number };
-    evaluation: { action: string; reason: string; shouldExit: boolean };
-  }>;
+  submissionMode: string;
+  shadowMarksUpdated?: number;
+  clock: { isOpen: boolean; nextOpen: string; nextClose: string };
+  account: { id: string; equity: string; optionsLevel: number };
+  session?: { state: string; sessionDate: string; haltReason: string | null };
+  underlyings: TickUnderlying[];
+  events?: { eventId: string; eventType: string }[];
+}
+
+interface History {
+  totalTicks: number;
+  summary: { intentsGenerated: number; abstainDecisions: number };
+  recentTicks: Tick[];
+}
+
+interface Health {
+  mode: "SYNTHETIC_MOCK" | "PAPER_TRADING";
+  alpaca?: { marketOpen: boolean; equity: string };
+}
+
+const REFRESH_MS = 10_000;
+
+function decisionClass(decision: string | undefined): string {
+  switch (decision) {
+    case "APPROVE":
+      return "badge badge-emerald";
+    case "SHRINK":
+    case "ABSTAIN":
+      return "badge badge-amber";
+    case "VETO":
+      return "badge badge-rose";
+    default:
+      return "badge";
+  }
 }
 
 export default function ExecutionPage() {
-  const [tickData, setTickData] = useState<TickHistoryResponse | null>(null);
-  const [posData, setPosData] = useState<PositionsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"TICK_HISTORY" | "POSITIONS" | "PIPELINE">("TICK_HISTORY");
+  const [history, setHistory] = useState<History | null>(null);
+  const [health, setHealth] = useState<Health | null>(null);
+  const [running, setRunning] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [lastDurationMs, setLastDurationMs] = useState<number | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const [historyResponse, healthResponse] = await Promise.all([
+        fetch("/api/tick/history"),
+        fetch("/api/health")
+      ]);
+      setHistory((await historyResponse.json()) as History);
+      setHealth((await healthResponse.json()) as Health);
+    } catch {
+      /* leave the last good state on screen rather than blanking it */
+    }
+  }, []);
+
+  const runTick = useCallback(async () => {
+    setRunning(true);
+    setLastError(null);
+    try {
+      const response = await fetch("/api/tick/run", { method: "POST" });
+      const body = (await response.json()) as { ok: boolean; error?: string; durationMs?: number };
+      setLastDurationMs(body.durationMs ?? null);
+      if (!body.ok) setLastError(body.error ?? "Tick failed.");
+      else setLastError(null);
+      await load();
+    } catch (error) {
+      setLastError(error instanceof Error ? error.message : "Tick request failed.");
+    } finally {
+      setRunning(false);
+    }
+  }, [load]);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/tick/history").then((r) => r.json()).catch(() => null),
-      fetch("/api/positions").then((r) => r.json()).catch(() => null),
-    ]).then(([ticks, positions]) => {
-      setTickData(ticks);
-      setPosData(positions);
-      setLoading(false);
-    });
-  }, []);
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    if (timer.current !== null) clearInterval(timer.current);
+    if (!autoRefresh) return;
+    timer.current = setInterval(() => void load(), REFRESH_MS);
+    return () => {
+      if (timer.current !== null) clearInterval(timer.current);
+    };
+  }, [autoRefresh, load]);
+
+  const latest = history?.recentTicks[0];
 
   return (
     <div className="page-container">
-      <div style={{ marginBottom: "28px" }}>
-        <div style={{ display: "inline-flex", gap: "8px", marginBottom: "8px" }}>
-          <span className="badge badge-cyan">AUTONOMOUS LOOP</span>
-          <span className="badge badge-emerald">PERMIT EXECUTOR ACTIVE</span>
+      <header style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 24, flexWrap: "wrap" }}>
+        <div>
+          <p className="eyebrow">Execution</p>
+          <h1>The autonomous loop</h1>
+          <p style={{ maxWidth: 620, color: "var(--text-secondary)" }}>
+            One tick fetches the chain, proposes a candidate, runs all eight invariants, and either
+            issues a signed permit or refuses. Submission to the broker stays gated behind{" "}
+            <code className="mono">COVENANT_LIVE_SUBMIT</code>, so a tick is safe to run from here.
+          </p>
         </div>
-        <h1 style={{ fontSize: "2.4rem", fontWeight: 900, letterSpacing: "-0.02em" }}>Execution</h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", maxWidth: "720px" }}>
-          Tick execution history, position monitoring, and the autonomous order pipeline.
-          The Alpha Engine proposes TradeIntents — executed solely via signed Ed25519 TradePermits.
-        </p>
-      </div>
-
-      {/* Summary Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", marginBottom: "28px" }}>
-        <div className="glass-panel" style={{ padding: "18px" }}>
-          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Total Ticks</div>
-          <div className="mono" style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--cyan)" }}>{tickData?.totalTicks ?? 0}</div>
-        </div>
-        <div className="glass-panel" style={{ padding: "18px" }}>
-          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Intents Generated</div>
-          <div className="mono" style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--emerald)" }}>{tickData?.summary.intentsGenerated ?? 0}</div>
-        </div>
-        <div className="glass-panel" style={{ padding: "18px" }}>
-          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Abstain Decisions</div>
-          <div className="mono" style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--amber)" }}>{tickData?.summary.abstainDecisions ?? 0}</div>
-        </div>
-        <div className="glass-panel" style={{ padding: "18px" }}>
-          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Open Positions</div>
-          <div className="mono" style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--cyan)" }}>{posData?.summary.total ?? 0}</div>
-        </div>
-      </div>
-
-      {/* Tab Selector */}
-      <div style={{ display: "flex", background: "var(--bg-panel)", border: "1px solid var(--border-subtle)", borderRadius: "8px", padding: "4px", marginBottom: "24px", width: "fit-content" }}>
-        {(["TICK_HISTORY", "POSITIONS", "PIPELINE"] as const).map((tab) => (
-          <button
-            key={tab}
-            className={`btn-secondary ${activeTab === tab ? "btn-primary" : ""}`}
-            style={{ padding: "6px 16px", border: "none" }}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab === "TICK_HISTORY" ? "Tick History" : tab === "POSITIONS" ? "Position Monitor" : "Order Pipeline"}
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          {health?.mode === "SYNTHETIC_MOCK" && (
+            <span className="badge badge-amber">SYNTHETIC MOCK</span>
+          )}
+          <Link href="/shadow-ledger" className="btn-secondary" style={{ textDecoration: "none" }}>
+            Shadow ledger →
+          </Link>
+          <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(event) => setAutoRefresh(event.target.checked)}
+            />
+            Auto-refresh
+          </label>
+          <button className="btn-primary" onClick={() => void runTick()} disabled={running}>
+            {running ? "Running…" : "Run tick"}
           </button>
-        ))}
-      </div>
+        </div>
+      </header>
 
-      {/* TAB: Tick History */}
-      {activeTab === "TICK_HISTORY" && (
-        <div>
-          <h2 style={{ fontSize: "1.3rem", fontWeight: 800, marginBottom: "16px" }}>Recent Tick Decisions</h2>
-          {loading ? (
-            <div className="glass-panel" style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>Loading tick history...</div>
-          ) : tickData && tickData.recentTicks.length > 0 ? (
-            <div style={{ display: "grid", gap: "12px" }}>
-              {tickData.recentTicks.map((tick, idx) => (
-                <div key={idx} className="glass-panel" style={{ padding: "18px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span className="mono" style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>{new Date(tick.timestamp).toLocaleString()}</span>
-                      <span className={`badge ${tick.dataMode === "PAPER" ? "badge-emerald" : "badge-amber"}`} style={{ fontSize: "0.62rem" }}>{tick.dataMode}</span>
-                      <span className={`badge ${tick.clock.isOpen ? "badge-emerald" : "badge-amber"}`} style={{ fontSize: "0.62rem" }}>
-                        {tick.clock.isOpen ? "MARKET OPEN" : "MARKET CLOSED"}
-                      </span>
-                    </div>
-                    <span className="mono" style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>Equity: ${tick.account.equity}</span>
-                  </div>
-                  {tick.underlyings.map((u) => (
-                    <div key={u.symbol} style={{ padding: "10px", background: "var(--surface-sunken)", borderRadius: "6px", marginBottom: "6px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span className="mono" style={{ fontWeight: 800 }}>{u.symbol}</span>
-                        {"intent" in u.proposal && u.proposal.intent ? (
-                          <span className="badge badge-emerald">TRADE INTENT</span>
-                        ) : (
-                          <span className="badge badge-amber">ABSTAIN</span>
-                        )}
-                      </div>
-                      {"intent" in u.proposal && u.proposal.intent ? (
-                        <div style={{ marginTop: "8px", fontSize: "0.82rem", color: "var(--text-secondary)" }}>
-                          <div>{u.proposal.intent.structure} · {u.proposal.intent.quantity} contracts · ${u.proposal.intent.limitPrice} limit</div>
-                          <div style={{ color: "var(--text-muted)", marginTop: "4px" }}>Max Loss: ${u.proposal.intent.standaloneMaxLoss} · Alpha: {u.proposal.intent.alphaScore}/100</div>
-                          <div className="mono" style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "4px" }}>Hash: {u.proposal.intent.intentHash?.slice(0, 24)}...</div>
-                        </div>
-                      ) : (
-                        <div style={{ marginTop: "6px", fontSize: "0.82rem", color: "var(--amber)" }}>
-                          {u.proposal.reason ?? "No reason provided"}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="glass-panel" style={{ padding: "40px", textAlign: "center", color: "var(--text-secondary)" }}>
-              No ticks recorded yet. Run <code className="mono" style={{ color: "var(--cyan)" }}>npm run tick</code> or trigger <code className="mono" style={{ color: "var(--cyan)" }}>POST /api/cron/tick</code> to start.
-            </div>
-          )}
+      {lastDurationMs !== null && lastError === null && (
+        <div className="glass-panel">
+          <p className="eyebrow success-text">Tick completed</p>
+          <p style={{ margin: 0, color: "var(--text-secondary)" }}>
+            Full cycle finished in <strong className="mono">{lastDurationMs}ms</strong>.
+            {latest?.shadowMarksUpdated !== undefined && latest.shadowMarksUpdated > 0 ? (
+              <>
+                {" "}
+                Shadow ledger updated <strong className="mono">{latest.shadowMarksUpdated}</strong>{" "}
+                candidate mark{latest.shadowMarksUpdated === 1 ? "" : "s"}.
+              </>
+            ) : null}
+          </p>
         </div>
       )}
 
-      {/* TAB: Position Monitor */}
-      {activeTab === "POSITIONS" && (
-        <div>
-          <h2 style={{ fontSize: "1.3rem", fontWeight: 800, marginBottom: "16px" }}>Open Positions & Exit Monitor</h2>
-          {posData && posData.positions.length > 0 ? (
-            <div style={{ display: "grid", gap: "12px" }}>
-              {posData.positions.map((p, idx) => (
-                <div key={idx} className="glass-panel" style={{ padding: "18px", borderLeft: `4px solid ${p.evaluation.shouldExit ? "var(--rose)" : "var(--emerald)"}` }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span className="mono" style={{ fontWeight: 800 }}>{p.position.symbol}</span>
-                    <span className={`badge ${p.evaluation.action === "HOLD" ? "badge-emerald" : p.evaluation.action === "ESCALATE" ? "badge-rose" : "badge-amber"}`}>
-                      {p.evaluation.action}
-                    </span>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "10px", marginTop: "10px", fontSize: "0.82rem" }}>
-                    <div><span style={{ color: "var(--text-muted)" }}>Qty:</span> <span className="mono" style={{ fontWeight: 700 }}>{p.position.qty}</span></div>
-                    <div><span style={{ color: "var(--text-muted)" }}>Entry:</span> <span className="mono" style={{ fontWeight: 700 }}>${p.position.entryPrice}</span></div>
-                    <div><span style={{ color: "var(--text-muted)" }}>Current:</span> <span className="mono" style={{ fontWeight: 700 }}>${p.position.currentPrice}</span></div>
-                    <div><span style={{ color: "var(--text-muted)" }}>P&L:</span> <span className="mono" style={{ fontWeight: 700, color: parseFloat(p.position.unrealizedPnl) >= 0 ? "var(--emerald)" : "var(--rose)" }}>${p.position.unrealizedPnl}</span></div>
-                    <div><span style={{ color: "var(--text-muted)" }}>DTE:</span> <span className="mono" style={{ fontWeight: 700 }}>{p.position.dte}</span></div>
-                  </div>
-                  <div style={{ marginTop: "8px", fontSize: "0.8rem", color: "var(--text-secondary)" }}>{p.evaluation.reason}</div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="glass-panel" style={{ padding: "40px", textAlign: "center", color: "var(--text-secondary)" }}>
-              No open option positions. Positions will appear here after the first permit-bound order is executed.
-            </div>
-          )}
+      {lastError !== null && (
+        <div className="glass-panel" style={{ borderColor: "var(--danger)" }}>
+          <p className="eyebrow" style={{ color: "var(--danger)" }}>Tick failed</p>
+          <p className="mono" style={{ margin: 0 }}>{lastError}</p>
         </div>
       )}
 
-      {/* TAB: Order Pipeline */}
-      {activeTab === "PIPELINE" && (
-        <div>
-          <h2 style={{ fontSize: "1.3rem", fontWeight: 800, marginBottom: "16px" }}>Order Pipeline Architecture</h2>
-          <div className="glass-panel" style={{ padding: "24px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "4px", textAlign: "center", marginBottom: "20px" }}>
-              {[
-                { step: "1", name: "Alpha Engine", desc: "Proposes TradeIntent", color: "var(--emerald)", status: "✓ ACTIVE" },
-                { step: "→", name: "", desc: "", color: "var(--text-muted)", status: "" },
-                { step: "2", name: "Safety Kernel", desc: "Evaluates COV-01…08", color: "var(--amber)", status: "⏳ LANE B" },
-                { step: "→", name: "", desc: "", color: "var(--text-muted)", status: "" },
-                { step: "3", name: "Permit Executor", desc: "Submits mleg order", color: "var(--amber)", status: "⏳ LANE B" },
-              ].map((item, idx) => (
-                item.name ? (
-                  <div key={idx} style={{ padding: "14px", border: `1px solid ${item.color}33`, borderRadius: "8px", background: `${item.color}08` }}>
-                    <div style={{ fontWeight: 800, color: item.color, fontSize: "0.9rem" }}>{item.name}</div>
-                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", margin: "4px 0" }}>{item.desc}</div>
-                    <span style={{ fontSize: "0.68rem", fontWeight: 700, color: item.color }}>{item.status}</span>
-                  </div>
-                ) : (
-                  <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", color: "var(--text-muted)" }}>→</div>
-                )
-              ))}
-            </div>
+      <section className="grid-4">
+        <div className="glass-panel">
+          <span className="eyebrow">Ticks run</span>
+          <strong style={{ fontSize: "1.5rem" }}>{history?.totalTicks ?? 0}</strong>
+        </div>
+        <div className="glass-panel">
+          <span className="eyebrow">Intents generated</span>
+          <strong style={{ fontSize: "1.5rem" }}>{history?.summary.intentsGenerated ?? 0}</strong>
+        </div>
+        <div className="glass-panel">
+          <span className="eyebrow">Abstentions</span>
+          <strong style={{ fontSize: "1.5rem" }}>{history?.summary.abstainDecisions ?? 0}</strong>
+        </div>
+        <div className="glass-panel">
+          <span className="eyebrow">Submission</span>
+          <strong style={{ fontSize: "1.5rem" }} className={latest?.submissionMode === "LIVE" ? "success-text" : "warning-text"}>
+            {latest?.submissionMode ?? "—"}
+          </strong>
+        </div>
+      </section>
 
-            <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "16px" }}>
-              <h3 style={{ fontWeight: 800, marginBottom: "12px" }}>Credential Isolation Boundaries</h3>
-              <div style={{ display: "grid", gap: "8px", fontSize: "0.84rem" }}>
-                <div style={{ padding: "10px", background: "var(--surface-sunken)", borderRadius: "6px" }}>
-                  <span style={{ color: "var(--emerald)", fontWeight: 700 }}>Alpha Engine</span>
-                  <span style={{ color: "var(--text-secondary)" }}> — Zero broker credentials. Cannot submit orders, sign permits, or read API keys.</span>
-                </div>
-                <div style={{ padding: "10px", background: "var(--surface-sunken)", borderRadius: "6px" }}>
-                  <span style={{ color: "var(--cyan)", fontWeight: 700 }}>Safety Kernel</span>
-                  <span style={{ color: "var(--text-secondary)" }}> — Holds signing private key. Re-fetches state independently (never trusts caller).</span>
-                </div>
-                <div style={{ padding: "10px", background: "var(--surface-sunken)", borderRadius: "6px" }}>
-                  <span style={{ color: "var(--amber)", fontWeight: 700 }}>Executor</span>
-                  <span style={{ color: "var(--text-secondary)" }}> — Sole module with Alpaca write access. Verifies signature + intent hash before submission.</span>
-                </div>
-              </div>
+      {latest === undefined ? (
+        <section className="glass-panel-glow">
+          <p className="eyebrow">No ticks yet</p>
+          <p style={{ marginBottom: 12 }}>
+            Nothing has run in this process. Press <strong>Run tick</strong> to execute one full
+            cycle — chain fetch, candidate proposal, invariant evaluation, permit signing.
+            {health?.mode === "SYNTHETIC_MOCK"
+              ? " Mock mode is on, so this works even when the market is closed."
+              : health?.alpaca?.marketOpen === false
+                ? " The market is closed; set ALPACA_MOCK_MODE=true in .env.local for offline ticks."
+                : null}
+          </p>
+          <button className="btn-primary" onClick={() => void runTick()} disabled={running}>
+            {running ? "Running…" : "Run first tick"}
+          </button>
+        </section>
+      ) : (
+        <section className="glass-panel-glow">
+          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <p className="eyebrow">Latest tick</p>
+              <h2 style={{ margin: 0 }}>{new Date(latest.timestamp).toLocaleTimeString()}</h2>
+            </div>
+            <div style={{ display: "flex", gap: 20, flexWrap: "wrap", fontSize: "0.8125rem" }}>
+              <span><span className="eyebrow">Data</span><br /><strong>{latest.dataMode}</strong></span>
+              <span><span className="eyebrow">Market</span><br /><strong className={latest.clock.isOpen ? "success-text" : "warning-text"}>{latest.clock.isOpen ? "Open" : "Closed"}</strong></span>
+              <span><span className="eyebrow">Session</span><br /><strong>{latest.session?.state ?? "—"}</strong></span>
+              <span><span className="eyebrow">Events</span><br /><strong className="mono">{latest.events?.length ?? 0}</strong></span>
+              <span><span className="eyebrow">Shadow marks</span><br /><strong className="mono">{latest.shadowMarksUpdated ?? 0}</strong></span>
             </div>
           </div>
-        </div>
+
+          <div style={{ marginTop: 20, display: "grid", gap: 12 }}>
+            {latest.underlyings.map((underlying) => {
+              const governance = underlying.governance;
+              return (
+                <article key={underlying.symbol} className="glass-panel" style={{ margin: 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                    <strong style={{ fontSize: "1.05rem" }}>{underlying.symbol}</strong>
+                    <span className={decisionClass(governance?.decision)}>
+                      {governance?.decision ?? "NO CANDIDATE"}
+                    </span>
+                  </div>
+                  <p style={{ color: "var(--text-secondary)", margin: "8px 0 0" }}>
+                    {governance?.reason ?? underlying.proposal.reason ?? "The engine produced no candidate."}
+                  </p>
+                  {governance?.failedInvariants.length ? (
+                    <p className="mono" style={{ margin: "8px 0 0", color: "var(--warning)" }}>
+                      {governance.failedInvariants.join(" · ")}
+                    </p>
+                  ) : null}
+                  {governance?.permit ? (
+                    <p className="mono" style={{ margin: "8px 0 0", color: "var(--text-muted)" }}>
+                      permit {governance.permit.permitId} · expires{" "}
+                      {new Date(governance.permit.expiresAt).toLocaleTimeString()}
+                    </p>
+                  ) : null}
+                  {governance?.execution?.submitted === true ? (
+                    <p className="mono success-text" style={{ margin: "8px 0 0" }}>
+                      order {governance.execution.orderId}
+                    </p>
+                  ) : null}
+                  {"intent" in underlying.proposal && underlying.proposal.intent ? (
+                    <p className="mono" style={{ margin: "8px 0 0", color: "var(--text-muted)" }}>
+                      {underlying.proposal.intent.quantity} × {underlying.proposal.intent.structure} · max
+                      loss ${underlying.proposal.intent.standaloneMaxLoss}
+                    </p>
+                  ) : null}
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {history !== null && history.recentTicks.length > 1 && (
+        <section>
+          <h2 style={{ marginBottom: 12 }}>Tick history</h2>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Session</th>
+                  <th>Decisions</th>
+                  <th>Events</th>
+                  <th>Mode</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.recentTicks.map((tick) => (
+                  <tr key={tick.timestamp}>
+                    <td className="mono">{new Date(tick.timestamp).toLocaleTimeString()}</td>
+                    <td>{tick.session?.state ?? "—"}</td>
+                    <td>
+                      {tick.underlyings
+                        .map((u) => `${u.symbol} ${u.governance?.decision ?? "—"}`)
+                        .join(", ")}
+                    </td>
+                    <td className="mono">{tick.events?.length ?? 0}</td>
+                    <td>{tick.submissionMode}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
     </div>
   );

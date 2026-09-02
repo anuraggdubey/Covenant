@@ -12,6 +12,7 @@ import type { CovenantEvent, MarketClock, OpenPosition } from "@/types/domain";
 import { computeAccountSnapshotHash, computeMarketSnapshotHash } from "@/lib/hashes";
 import { profileLimits, toPolicyUnits } from "@/lib/mandates/profiles";
 import { toOpenPositions } from "@/lib/safety/position-risk";
+import { recordDecision, remark } from "@/lib/shadow-ledger/store";
 
 export interface TickResult {
   timestamp: string;
@@ -43,6 +44,8 @@ export interface TickResult {
   submissionMode: "LIVE" | "HELD";
   /** Hash-chained record of the tick. Replayable with `npm run verify`. */
   events?: CovenantEvent[];
+  /** Shadow-ledger counterfactuals re-marked against this tick's quotes. */
+  shadowMarksUpdated?: number;
 }
 
 /**
@@ -207,6 +210,7 @@ export async function executeTick(
   };
 
   const underlyingsResult: TickResult["underlyings"] = [];
+  const chainsThisTick: MarketSnapshot[] = [];
 
   if (!clock.is_open) {
     for (const symbol of policy.allowedUnderlyings) {
@@ -296,6 +300,21 @@ export async function executeTick(
         });
       }
 
+      chainsThisTick.push(marketSnapshot);
+
+      // Every candidate the kernel saw enters the shadow ledger, whatever it
+      // decided. Marking only the approvals would be the selection bias the
+      // ledger exists to measure.
+      if ("intent" in proposal && governance) {
+        recordDecision({
+          intent: proposal.intent,
+          decision: governance.decision,
+          failedInvariants: governance.failedInvariants,
+          governedQuantity: governance.finalIntent?.quantity ?? 0,
+          decidedAt: new Date().toISOString(),
+        });
+      }
+
       underlyingsResult.push({
         symbol: sym,
         marketSnapshotHash: marketSnapshot.snapshotHash,
@@ -314,9 +333,14 @@ export async function executeTick(
     }
   }
 
+  // Fresh quotes arrived, so every outstanding counterfactual gets re-marked
+  // on the same schedule — governed and shadow alike.
+  const remarked = remark(chainsThisTick, new Date().toISOString());
+
   const result: TickResult = {
     timestamp: new Date().toISOString(),
     dataMode: readClient.isMockMode() ? "SYNTHETIC_MOCK" : "PAPER",
+    shadowMarksUpdated: remarked,
     clock: {
       isOpen: clock.is_open,
       timestamp: clock.timestamp,

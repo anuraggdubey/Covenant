@@ -1,6 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { motion, Variants } from "framer-motion";
+import {
+  Layers,
+  Sparkles,
+  TrendingUp,
+  RefreshCw,
+  Search,
+  Filter,
+  ArrowRight,
+  ShieldCheck,
+  AlertCircle,
+  Clock,
+  Zap,
+  Info
+} from "lucide-react";
 import { PayoffChart } from "@/components/PayoffChart";
 
 interface ContractView {
@@ -8,6 +23,7 @@ interface ContractView {
   ask: string;
   delta?: number;
   impliedVolatility?: number;
+  symbol?: string;
 }
 
 interface LegView {
@@ -49,7 +65,11 @@ interface UnderlyingView {
 }
 
 interface CandidateResponse {
+  timestamp?: string;
   dataMode: "PAPER" | "SYNTHETIC_MOCK";
+  freshness?: "LIVE" | "STALE";
+  source?: "BROKER" | "CACHE";
+  warning?: string;
   underlyings: UnderlyingView[];
 }
 
@@ -61,19 +81,23 @@ export default function CandidateLabPage() {
   const [selectedExpiry, setSelectedExpiry] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"SPREADS" | "CHAIN_LADDER">("SPREADS");
 
+  // Filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [structureFilter, setStructureFilter] = useState<string>("ALL");
+  const [maxLossCap, setMaxLossCap] = useState<string>("");
+
   const fetchCandidates = async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/candidates");
-      const json = await res.json() as CandidateResponse & { error?: string };
+      const json = (await res.json()) as CandidateResponse & { error?: string };
       if (!res.ok) throw new Error(json.error ?? "Candidate data is unavailable.");
       setData(json);
 
-      // Default selected expiry to first available
-      const activeData = json.underlyings.find((underlying) => underlying.underlying === selectedUnderlying);
+      const activeData = json.underlyings.find((u) => u.underlying === selectedUnderlying);
       if (activeData && activeData.expirations.length > 0 && !selectedExpiry) {
-        setSelectedExpiry(activeData.expirations[0]);
+        setSelectedExpiry(activeData.expirations[0]!);
       }
     } catch (err: unknown) {
       setData(null);
@@ -95,335 +119,490 @@ export default function CandidateLabPage() {
   const currentExpiry = selectedExpiry || activeExpirations[0] || "";
   const currentLadder = activeUnderlyingData?.ladderByExpiry?.[currentExpiry] ?? [];
 
+  // Filtered spreads
+  const filteredCandidates = useMemo(() => {
+    if (!activeUnderlyingData) return [];
+    let list = activeUnderlyingData.rankedCandidates;
+
+    if (structureFilter !== "ALL") {
+      list = list.filter((c) => c.structure === structureFilter);
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (c) =>
+          c.thesis.toLowerCase().includes(q) ||
+          c.structure.toLowerCase().includes(q) ||
+          c.expiry.toLowerCase().includes(q) ||
+          c.legs.some((l) => l.symbol.toLowerCase().includes(q))
+      );
+    }
+
+    if (maxLossCap.trim()) {
+      const cap = Number(maxLossCap);
+      if (Number.isFinite(cap) && cap > 0) {
+        list = list.filter((c) => Number(c.standaloneMaxLoss) <= cap);
+      }
+    }
+
+    return list;
+  }, [activeUnderlyingData, structureFilter, searchQuery, maxLossCap]);
+
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+
+  const itemVariants: Variants = {
+    hidden: { y: 15, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { duration: 0.4 } }
+  };
+
   return (
-    <div className="page-container">
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px", flexWrap: "wrap", gap: "16px" }}>
-        <div>
-          <div style={{ display: "inline-flex", gap: "8px", marginBottom: "8px" }}>
-            <span className="badge badge-cyan">LANE A · ALPACA MARKET DATA</span>
-            <span className="badge badge-emerald">LATEST AVAILABLE SNAPSHOTS</span>
-            {data?.dataMode === "SYNTHETIC_MOCK" && <span className="badge badge-amber">SYNTHETIC MOCK DATA</span>}
-          </div>
-          <h1 style={{ fontSize: "2.4rem", fontWeight: 900, letterSpacing: "-0.02em" }}>
-            Candidate Lab & Option Chains
-          </h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem" }}>
-            Ingesting Alpaca option snapshots, Greeks, implied volatility, and compiling defined-risk vertical spreads. Indicative data is delayed and modified by the provider.
-          </p>
-        </div>
-
-        <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ display: "flex", background: "var(--bg-panel)", border: "1px solid var(--border-subtle)", borderRadius: "8px", padding: "4px" }}>
-            <button
-              className={`btn-secondary ${selectedUnderlying === "SPY" ? "btn-primary" : ""}`}
-              style={{ padding: "6px 14px", border: "none" }}
-              onClick={() => {
-                setSelectedUnderlying("SPY");
-                setSelectedExpiry("");
-              }}
-            >
-              SPY
-            </button>
-            <button
-              className={`btn-secondary ${selectedUnderlying === "QQQ" ? "btn-primary" : ""}`}
-              style={{ padding: "6px 14px", border: "none" }}
-              onClick={() => {
-                setSelectedUnderlying("QQQ");
-                setSelectedExpiry("");
-              }}
-            >
-              QQQ
-            </button>
-          </div>
-
-          <div style={{ display: "flex", background: "var(--bg-panel)", border: "1px solid var(--border-subtle)", borderRadius: "8px", padding: "4px" }}>
-            <button
-              className={`btn-secondary ${activeTab === "SPREADS" ? "btn-primary" : ""}`}
-              style={{ padding: "6px 14px", border: "none" }}
-              onClick={() => setActiveTab("SPREADS")}
-            >
-              Ranked Spreads
-            </button>
-            <button
-              className={`btn-secondary ${activeTab === "CHAIN_LADDER" ? "btn-primary" : ""}`}
-              style={{ padding: "6px 14px", border: "none" }}
-              onClick={() => setActiveTab("CHAIN_LADDER")}
-            >
-              Option Snapshot Ladder
-            </button>
-          </div>
-
-          <button className="btn-primary" onClick={fetchCandidates} disabled={loading}>
-            {loading ? "Fetching..." : "Refresh Candidate Data"}
-          </button>
-        </div>
-      </div>
-
-      {error && (
-        <div className="glass-panel" style={{ padding: "18px", marginBottom: "24px", color: "var(--amber)" }}>
-          {error}
-        </div>
-      )}
-
-      {/* Underlying Market State Bar */}
-      {activeUnderlyingData && (
-        <div className="glass-panel" style={{ padding: "20px", marginBottom: "28px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
+    <div className="flex-1 w-full bg-[#F0EFE3] min-h-screen">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="max-w-[1400px] mx-auto px-6 py-12 md:py-16 flex flex-col gap-8"
+      >
+        {/* Header */}
+        <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-black/15">
           <div>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
-              {data?.dataMode === "SYNTHETIC_MOCK" ? "Synthetic Underlying Price" : "Latest Alpaca Paper Price"}
-            </div>
-            <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text)" }}>
-              ${activeUnderlyingData.underlyingPrice}
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
-              Trend & Volatility Signal
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
-              <span className={`badge ${activeUnderlyingData.signals.trend === "BULLISH" ? "badge-emerald" : "badge-amber"}`}>
-                {activeUnderlyingData.signals.trend}
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-mono font-bold uppercase tracking-wider bg-white border border-black/15 text-[#232323]">
+                CANDIDATE LAB · LANE A
               </span>
-              <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                Realized Vol: {(activeUnderlyingData.signals.realizedVol20d * 100).toFixed(1)}%
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-mono font-bold uppercase tracking-wider bg-[#EAEEDD] border border-black/15 text-emerald-900">
+                ALPACA MARKET DATA
               </span>
+              {data?.freshness === "STALE" && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-mono font-bold uppercase tracking-wider bg-amber-50 border border-black/15 text-amber-900">
+                  <Clock className="w-3 h-3" />
+                  STALE QUOTES
+                </span>
+              )}
             </div>
+
+            <h1 className="text-3xl md:text-5xl font-medium text-[#232323] tracking-tight">
+              Ranked defined-risk spreads & chains
+            </h1>
+            <p className="text-base text-[#74736A] mt-2 max-w-3xl">
+              Ingesting live Alpaca options chains, calculating exact standalone max-loss and payoff math, and ranking legal vertical spreads without broker write authority.
+            </p>
           </div>
 
-          <div>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
-              Feed & Total Contracts
-            </div>
-            <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--cyan)" }}>
-              {activeUnderlyingData.feed?.toUpperCase()} · {activeUnderlyingData.totalContractsInChain} contracts
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
-              Eligible Spreads Generated
-            </div>
-            <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--emerald)" }}>
-              {activeUnderlyingData.candidatesCount} defined-risk setups
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 1: Ranked Spread Candidates */}
-      {activeTab === "SPREADS" && (
-        <div>
-          <h2 style={{ fontSize: "1.4rem", fontWeight: 800, marginBottom: "16px" }}>
-            Ranked Spread Candidates ({selectedUnderlying})
-          </h2>
-
-          {loading ? (
-            <div className="glass-panel" style={{ padding: "40px", textAlign: "center", color: "var(--text-secondary)" }}>
-              Ingesting live option chains and generating defined-risk spreads...
-            </div>
-          ) : activeUnderlyingData && activeUnderlyingData.rankedCandidates.length > 0 ? (
-            <div style={{ display: "grid", gap: "24px" }}>
-              {activeUnderlyingData.rankedCandidates.map((cand, idx) => (
-                <div
-                  key={cand.id}
-                  className="glass-panel-glow"
-                  style={{
-                    padding: "24px",
-                    borderLeft: `4px solid ${idx === 0 ? "var(--emerald)" : "var(--cyan)"}`,
+          {/* Controls: Symbol switcher & Refresh */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex bg-white border border-black/15 p-1">
+              {(["SPY", "QQQ"] as const).map((sym) => (
+                <button
+                  key={sym}
+                  onClick={() => {
+                    setSelectedUnderlying(sym);
+                    setSelectedExpiry("");
                   }}
+                  className={`px-4 py-1.5 text-xs font-mono font-bold uppercase transition-all ${
+                    selectedUnderlying === sym
+                      ? "bg-[#232323] text-white"
+                      : "text-[#74736A] hover:text-[#232323]"
+                  }`}
                 >
-                  <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(320px, 1fr)", gap: "24px", marginBottom: "18px" }}>
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", flexWrap: "wrap" }}>
-                        <span className="badge badge-cyan">RANK #{idx + 1}</span>
-                        <span className="badge badge-emerald">{cand.structure}</span>
-                        <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                          Exp: {cand.expiry} ({cand.dte} DTE)
-                        </span>
-                      </div>
-                      <h3 style={{ fontSize: "1.25rem", fontWeight: 800, marginBottom: "12px" }}>
-                        {cand.thesis}
-                      </h3>
-
-                      {/* Legs Breakdown */}
-                      <div style={{ background: "var(--surface-sunken)", borderRadius: "8px", padding: "14px" }}>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "8px", fontWeight: 700 }}>
-                          Exact OCC Contract Legs
-                        </div>
-                        <div style={{ display: "grid", gap: "8px" }}>
-                          {cand.legs.map((leg, lIdx) => (
-                            <div key={lIdx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.86rem" }}>
-                              <span className="mono" style={{ color: leg.side === "buy" ? "var(--emerald)" : "var(--rose)", fontWeight: 800 }}>
-                                {leg.positionIntent.toUpperCase()} {leg.ratioQty}x
-                              </span>
-                              <span className="mono" style={{ color: "var(--text)" }}>
-                                {leg.symbol}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Payoff Curve Visualizer */}
-                    <div>
-                      <PayoffChart
-                        structure={cand.structure}
-                        maxLoss={cand.standaloneMaxLoss}
-                        maxGain={cand.standaloneMaxGain}
-                        breakeven={cand.breakevenUnderlying}
-                        limitPrice={cand.limitPrice}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Payoff & Risk Metrics */}
-                  <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "14px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px", fontSize: "0.84rem" }}>
-                    <div>
-                      <span style={{ color: "var(--text-muted)" }}>Sized Quantity:</span>
-                      <div className="mono" style={{ fontWeight: 800, color: "var(--text)" }}>{cand.quantity} contracts</div>
-                    </div>
-                    <div>
-                      <span style={{ color: "var(--text-muted)" }}>Limit Price / Share:</span>
-                      <div className="mono" style={{ fontWeight: 800, color: "var(--cyan)" }}>${cand.limitPrice}</div>
-                    </div>
-                    <div>
-                      <span style={{ color: "var(--text-muted)" }}>Standalone Max Loss:</span>
-                      <div className="mono" style={{ fontWeight: 800, color: "var(--rose)" }}>${cand.standaloneMaxLoss}</div>
-                    </div>
-                    <div>
-                      <span style={{ color: "var(--text-muted)" }}>Standalone Max Gain:</span>
-                      <div className="mono" style={{ fontWeight: 800, color: "var(--emerald)" }}>${cand.standaloneMaxGain}</div>
-                    </div>
-                    <div>
-                      <span style={{ color: "var(--text-muted)" }}>Risk / Reward:</span>
-                      <div className="mono" style={{ fontWeight: 800, color: "var(--cyan)" }}>{cand.riskRewardRatio}</div>
-                    </div>
-                    <div>
-                      <span style={{ color: "var(--text-muted)" }}>Alpha Score:</span>
-                      <div className="mono" style={{ fontWeight: 900, color: "var(--emerald)" }}>{cand.alphaScore}/100</div>
-                    </div>
-                    <div>
-                      <span style={{ color: "var(--text-muted)" }}>90% Lower Bound:</span>
-                      <div className="mono" style={{ fontWeight: 800, color: "var(--emerald)" }}>${cand.lowerConfidenceBoundPnl}</div>
-                    </div>
-                  </div>
-                </div>
+                  {sym}
+                </button>
               ))}
             </div>
-          ) : (
-            <div className="glass-panel" style={{ padding: "40px", textAlign: "center", color: "var(--amber)" }}>
-              No candidate vertical spreads currently meet active policy filter criteria. (Fail-closed ABSTAIN).
+
+            <button
+              onClick={fetchCandidates}
+              disabled={loading}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-[#FAF9F5] text-[#232323] text-xs font-mono font-bold uppercase border border-black/15 transition-colors cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-[#74736A] ${loading ? "animate-spin" : ""}`} />
+              {loading ? "Refreshing..." : "Refresh Chains"}
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Warning Banner */}
+        {data?.warning && (
+          <div className="bg-amber-50 border border-amber-800/30 p-4 flex items-start gap-3 text-amber-950 text-xs font-mono">
+            <Info className="w-4 h-4 text-amber-800 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold">OBSERVATION NOTICE: </span>
+              {data.warning}
             </div>
-          )}
+          </div>
+        )}
+
+        {/* Underlying Telemetry Cards (Sharp flat blocks) */}
+        {activeUnderlyingData && (
+          <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-[#EAEEDD] border border-black/15 p-5">
+              <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">
+                01 · {selectedUnderlying} MARK
+              </span>
+              <div className="text-2xl md:text-3xl font-bold font-mono text-[#232323] mt-1">
+                ${activeUnderlyingData.underlyingPrice}
+              </div>
+              <span className="text-[10px] text-[#74736A] font-mono mt-1 block">Live execution reference</span>
+            </div>
+
+            <div className="bg-white border border-black/15 p-5">
+              <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">
+                02 · MARKET SIGNAL
+              </span>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider bg-[#EAEEDD] text-emerald-900 border border-emerald-800/30">
+                  {activeUnderlyingData.signals.trend}
+                </span>
+                <span className="font-mono text-sm font-bold text-[#232323]">
+                  {(activeUnderlyingData.signals.realizedVol20d * 100).toFixed(1)}% Realized Vol
+                </span>
+              </div>
+              <span className="text-[10px] text-[#74736A] font-mono mt-1 block">20-day historical window</span>
+            </div>
+
+            <div className="bg-white border border-black/15 p-5">
+              <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">
+                03 · INGESTION FEED
+              </span>
+              <div className="text-xl font-bold font-mono text-[#0B4FFF] mt-1 uppercase">
+                {activeUnderlyingData.feed}
+              </div>
+              <span className="text-[10px] text-[#74736A] font-mono mt-1 block">
+                {activeUnderlyingData.totalContractsInChain} option contracts
+              </span>
+            </div>
+
+            <div className="bg-white border border-black/15 p-5">
+              <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">
+                04 · ELIGIBLE SPREADS
+              </span>
+              <div className="text-2xl font-bold font-mono text-emerald-800 mt-1">
+                {activeUnderlyingData.candidatesCount}
+              </div>
+              <span className="text-[10px] text-[#74736A] font-mono mt-1 block">Capped risk setups</span>
+            </div>
+          </motion.div>
+        )}
+
+        {/* View Switcher Tabs */}
+        <div className="flex items-center justify-between border-b border-black/15 pb-2">
+          <div className="flex gap-4">
+            <button
+              onClick={() => setActiveTab("SPREADS")}
+              className={`text-sm font-mono font-bold uppercase pb-2 border-b-2 transition-all cursor-pointer ${
+                activeTab === "SPREADS"
+                  ? "border-[#0B4FFF] text-[#0B4FFF]"
+                  : "border-transparent text-[#74736A] hover:text-[#232323]"
+              }`}
+            >
+              Ranked Vertical Spreads ({filteredCandidates.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("CHAIN_LADDER")}
+              className={`text-sm font-mono font-bold uppercase pb-2 border-b-2 transition-all cursor-pointer ${
+                activeTab === "CHAIN_LADDER"
+                  ? "border-[#0B4FFF] text-[#0B4FFF]"
+                  : "border-transparent text-[#74736A] hover:text-[#232323]"
+              }`}
+            >
+              Option Chain Ladder
+            </button>
+          </div>
         </div>
-      )}
 
-      {/* TAB 2: Live Real Option Chain Ladder */}
-      {activeTab === "CHAIN_LADDER" && (
-        <div className="glass-panel" style={{ padding: "20px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
-            <h2 style={{ fontSize: "1.2rem", fontWeight: 800 }}>
-              Option Snapshot Ladder — {selectedUnderlying}
-            </h2>
+        {/* TAB 1: Ranked Spread Candidates */}
+        {activeTab === "SPREADS" && (
+          <motion.div variants={itemVariants} className="flex flex-col gap-6">
+            {/* Filter controls card */}
+            <div className="bg-white border border-black/15 p-4 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-1 min-w-[240px]">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-[#74736A] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search thesis, strike, or OCC symbol..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-[#FAF9F5] border border-black/15 text-xs text-[#232323] focus:outline-none focus:border-[#0B4FFF] font-mono rounded-none"
+                  />
+                </div>
+              </div>
 
-            {/* Expiration Picker */}
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Expiration:</span>
-              <select
-                value={currentExpiry}
-                onChange={(e) => setSelectedExpiry(e.target.value)}
-                style={{
-                  background: "var(--bg-dark)",
-                  color: "var(--cyan)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: "6px",
-                  padding: "6px 12px",
-                  fontSize: "0.82rem",
-                  fontFamily: "monospace",
-                  fontWeight: 700,
-                }}
-              >
-                {activeExpirations.map((exp: string) => (
-                  <option key={exp} value={exp}>
-                    {exp}
-                  </option>
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#74736A]">
+                  <Filter className="w-3 h-3" />
+                  <span>STRUCTURE:</span>
+                  <select
+                    value={structureFilter}
+                    onChange={(e) => setStructureFilter(e.target.value)}
+                    className="bg-[#FAF9F5] border border-black/15 px-2.5 py-1.5 text-xs text-[#232323] font-mono rounded-none"
+                  >
+                    <option value="ALL">ALL STRUCTURES</option>
+                    <option value="BULL_CALL_DEBIT">BULL CALL DEBIT</option>
+                    <option value="BEAR_PUT_DEBIT">BEAR PUT DEBIT</option>
+                    <option value="CREDIT_VERTICAL">CREDIT VERTICAL</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#74736A]">
+                  <span>MAX LOSS ($):</span>
+                  <input
+                    type="number"
+                    placeholder="No max"
+                    value={maxLossCap}
+                    onChange={(e) => setMaxLossCap(e.target.value)}
+                    className="w-24 bg-[#FAF9F5] border border-black/15 px-2.5 py-1.5 text-xs text-[#232323] font-mono rounded-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Candidates List (Cards from Images 4 & 5!) */}
+            {loading ? (
+              <div className="bg-white p-16 text-center border border-black/15">
+                <RefreshCw className="w-6 h-6 text-[#0B4FFF] animate-spin mx-auto mb-3" />
+                <div className="text-sm font-mono font-bold text-[#232323]">INGESTING ALPACA OPTION CHAINS...</div>
+                <div className="text-xs text-[#74736A] mt-1 font-mono">Calculating exact max-loss envelopes</div>
+              </div>
+            ) : filteredCandidates.length > 0 ? (
+              <div className="grid grid-cols-1 gap-6">
+                {filteredCandidates.map((cand, idx) => (
+                  <div
+                    key={cand.id}
+                    className="bg-white border border-black/15 flex flex-col justify-between"
+                  >
+                    {/* Card Header (Pale sage background from Image 4) */}
+                    <div className="p-5 md:p-6 bg-[#EAEEDD] border-b border-black/15 flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-xs font-bold text-[#232323]">
+                          {String(idx + 1).padStart(2, "0")}
+                        </span>
+                        <span className="font-mono text-xs font-bold text-[#0B4FFF] uppercase">
+                          {cand.structure.replace(/_/g, " ")}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-white border border-black/15 text-[#232323]">
+                          {cand.expiry}
+                        </span>
+                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-white border border-black/15 text-[#232323]">
+                          {cand.dte} DTE
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Card Body */}
+                    <div className="p-6 md:p-8">
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+                        {/* Left: Thesis & Legs */}
+                        <div className="lg:col-span-7 flex flex-col justify-between">
+                          <div>
+                            <h3 className="text-xl md:text-2xl font-serif text-[#232323] leading-snug mb-4">
+                              {cand.thesis}
+                            </h3>
+
+                            {/* Exact OCC Legs */}
+                            <div className="bg-[#FAF9F5] p-4 border border-black/10">
+                              <div className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider mb-2">
+                                EXACT OCC LEGS
+                              </div>
+                              <div className="space-y-1.5">
+                                {cand.legs.map((leg, lIdx) => (
+                                  <div
+                                    key={lIdx}
+                                    className="flex items-center justify-between text-xs py-1.5 px-2.5 bg-white border border-black/10 font-mono"
+                                  >
+                                    <span
+                                      className={`font-bold uppercase ${
+                                        leg.side === "buy" ? "text-emerald-800" : "text-rose-700"
+                                      }`}
+                                    >
+                                      {leg.positionIntent.replace(/_/g, " ")} {leg.ratioQty}x
+                                    </span>
+                                    <span className="text-[#232323] font-semibold">{leg.symbol}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right: Payoff Visualization */}
+                        <div className="lg:col-span-5 flex flex-col justify-center">
+                          <PayoffChart
+                            structure={cand.structure}
+                            maxLoss={cand.standaloneMaxLoss}
+                            maxGain={cand.standaloneMaxGain}
+                            breakeven={cand.breakevenUnderlying}
+                            limitPrice={cand.limitPrice}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Metrics row */}
+                      <div className="pt-4 border-t border-black/10 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 text-xs font-mono">
+                        <div className="bg-[#FAF9F5] p-2 border border-black/10">
+                          <span className="text-[#74736A] text-[9px] uppercase font-bold block">Quantity</span>
+                          <span className="font-bold text-[#232323] text-xs mt-0.5 block">{cand.quantity} lots</span>
+                        </div>
+                        <div className="bg-[#FAF9F5] p-2 border border-black/10">
+                          <span className="text-[#74736A] text-[9px] uppercase font-bold block">Limit Price</span>
+                          <span className="font-bold text-[#0B4FFF] text-xs mt-0.5 block">${cand.limitPrice}</span>
+                        </div>
+                        <div className="bg-[#FAF9F5] p-2 border border-black/10">
+                          <span className="text-[#74736A] text-[9px] uppercase font-bold block">Max Loss</span>
+                          <span className="font-bold text-rose-700 text-xs mt-0.5 block">${cand.standaloneMaxLoss}</span>
+                        </div>
+                        <div className="bg-[#FAF9F5] p-2 border border-black/10">
+                          <span className="text-[#74736A] text-[9px] uppercase font-bold block">Max Gain</span>
+                          <span className="font-bold text-emerald-800 text-xs mt-0.5 block">${cand.standaloneMaxGain}</span>
+                        </div>
+                        <div className="bg-[#FAF9F5] p-2 border border-black/10">
+                          <span className="text-[#74736A] text-[9px] uppercase font-bold block">R / R</span>
+                          <span className="font-bold text-[#232323] text-xs mt-0.5 block">{cand.riskRewardRatio}</span>
+                        </div>
+                        <div className="bg-[#FAF9F5] p-2 border border-black/10">
+                          <span className="text-[#74736A] text-[9px] uppercase font-bold block">Alpha Score</span>
+                          <span className="font-bold text-emerald-800 text-xs mt-0.5 block">{cand.alphaScore}/100</span>
+                        </div>
+                        <div className="bg-[#FAF9F5] p-2 border border-black/10">
+                          <span className="text-[#74736A] text-[9px] uppercase font-bold block">90% Lower</span>
+                          <span className="font-bold text-emerald-800 text-xs mt-0.5 block">${cand.lowerConfidenceBoundPnl}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom Card Footer Action Bar (Image 4 & 5 Style!) */}
+                    <div className="flex items-stretch border-t border-black/15 bg-white">
+                      <div className="flex-1 px-5 py-3.5 text-xs font-mono font-bold uppercase tracking-wider text-[#232323]">
+                        {cand.structure.replace(/_/g, " ")} · {cand.expiry}
+                      </div>
+                      <div className="w-12 h-11 flex items-center justify-center border-l border-black/15 bg-[#EAEEDD] hover:bg-[#DDE2CF] text-[#232323] transition-colors cursor-pointer">
+                        <ArrowRight className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </select>
-            </div>
-          </div>
+              </div>
+            ) : (
+              <div className="bg-white p-16 text-center border border-black/15">
+                <AlertCircle className="w-6 h-6 text-amber-700 mx-auto mb-2" />
+                <h3 className="text-base font-mono font-bold text-[#232323]">NO CANDIDATES MATCH FILTER</h3>
+                <p className="text-xs text-[#74736A] mt-1 font-mono">Covenant fails closed and returns ABSTAIN.</p>
+              </div>
+            )}
+          </motion.div>
+        )}
 
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem", textAlign: "center" }}>
-              <thead>
-                <tr style={{ background: "var(--surface-sunken)", color: "var(--text-muted)", fontSize: "0.74rem", textTransform: "uppercase" }}>
-                  <th colSpan={4} style={{ padding: "8px", color: "var(--cyan)" }}>CALLS (BULLISH)</th>
-                  <th style={{ padding: "8px", background: "var(--surface-subtle)", color: "var(--text)" }}>STRIKE</th>
-                  <th colSpan={4} style={{ padding: "8px", color: "var(--rose)" }}>PUTS (BEARISH)</th>
-                </tr>
-                <tr style={{ borderBottom: "1px solid var(--border-subtle)", color: "var(--text-muted)", fontSize: "0.72rem" }}>
-                  <th style={{ padding: "6px" }}>Delta</th>
-                  <th style={{ padding: "6px" }}>IV</th>
-                  <th style={{ padding: "6px" }}>Bid</th>
-                  <th style={{ padding: "6px" }}>Ask</th>
-                  <th style={{ padding: "6px", background: "var(--surface-subtle)" }}>$ Strike</th>
-                  <th style={{ padding: "6px" }}>Bid</th>
-                  <th style={{ padding: "6px" }}>Ask</th>
-                  <th style={{ padding: "6px" }}>IV</th>
-                  <th style={{ padding: "6px" }}>Delta</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentLadder.length > 0 ? (
-                  currentLadder.map((row, rIdx) => {
-                    const c = row.call;
-                    const p = row.put;
-                    return (
-                      <tr key={rIdx} style={{ borderBottom: "1px solid var(--surface-subtle)" }}>
-                        <td className="mono" style={{ padding: "8px", color: "var(--text-secondary)" }}>
-                          {c?.delta !== undefined ? c.delta.toFixed(2) : "—"}
-                        </td>
-                        <td className="mono" style={{ padding: "8px", color: "var(--text-muted)" }}>
-                          {c?.impliedVolatility ? (c.impliedVolatility * 100).toFixed(1) + "%" : "—"}
-                        </td>
-                        <td className="mono" style={{ padding: "8px", color: "var(--emerald)", fontWeight: 700 }}>
-                          {c?.bid ? `$${c.bid}` : "—"}
-                        </td>
-                        <td className="mono" style={{ padding: "8px" }}>
-                          {c?.ask ? `$${c.ask}` : "—"}
-                        </td>
-                        <td className="mono" style={{ padding: "8px", fontWeight: 800, background: "var(--surface-subtle)", color: "var(--cyan)" }}>
-                          ${row.strike}
-                        </td>
-                        <td className="mono" style={{ padding: "8px", color: "var(--emerald)", fontWeight: 700 }}>
-                          {p?.bid ? `$${p.bid}` : "—"}
-                        </td>
-                        <td className="mono" style={{ padding: "8px" }}>
-                          {p?.ask ? `$${p.ask}` : "—"}
-                        </td>
-                        <td className="mono" style={{ padding: "8px", color: "var(--text-muted)" }}>
-                          {p?.impliedVolatility ? (p.impliedVolatility * 100).toFixed(1) + "%" : "—"}
-                        </td>
-                        <td className="mono" style={{ padding: "8px", color: "var(--text-secondary)" }}>
-                          {p?.delta !== undefined ? p.delta.toFixed(2) : "—"}
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={9} style={{ padding: "20px", color: "var(--text-muted)" }}>
-                      No contracts found for expiration {currentExpiry}.
-                    </td>
+        {/* TAB 2: Option Chain Snapshot Ladder */}
+        {activeTab === "CHAIN_LADDER" && (
+          <motion.div variants={itemVariants} className="bg-white border border-black/15">
+            <div className="p-5 md:p-6 bg-[#EAEEDD] border-b border-black/15 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-mono font-bold text-[#232323] uppercase">
+                  Option Snapshot Ladder — {selectedUnderlying}
+                </h2>
+                <p className="text-xs text-[#74736A] font-mono mt-0.5">
+                  Real quotes, Greeks, and implied volatility across all strikes.
+                </p>
+              </div>
+
+              {/* Expiry Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono font-bold text-[#74736A]">EXPIRY:</span>
+                <select
+                  value={currentExpiry}
+                  onChange={(e) => setSelectedExpiry(e.target.value)}
+                  className="bg-white border border-black/15 px-3 py-1.5 text-xs font-mono font-bold text-[#0B4FFF] focus:outline-none rounded-none"
+                >
+                  {activeExpirations.map((exp: string) => (
+                    <option key={exp} value={exp}>
+                      {exp}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-center text-xs border-collapse font-mono">
+                <thead>
+                  <tr className="bg-[#FAF9F5] text-[#74736A] uppercase text-[10px] font-bold border-b border-black/10">
+                    <th colSpan={4} className="py-2.5 px-3 text-[#0B4FFF] border-r border-black/10">
+                      CALLS (Bullish)
+                    </th>
+                    <th className="py-2.5 px-3 bg-[#EAEEDD] text-[#232323] border-r border-black/10">Strike</th>
+                    <th colSpan={4} className="py-2.5 px-3 text-rose-700">
+                      PUTS (Bearish)
+                    </th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                  <tr className="border-b border-black/15 text-[10px] text-[#74736A]">
+                    <th className="py-2 px-2">Delta</th>
+                    <th className="py-2 px-2">IV</th>
+                    <th className="py-2 px-2">Bid</th>
+                    <th className="py-2 px-2 border-r border-black/10">Ask</th>
+                    <th className="py-2 px-3 bg-[#EAEEDD] font-bold text-[#232323] border-r border-black/10">$ Strike</th>
+                    <th className="py-2 px-2">Bid</th>
+                    <th className="py-2 px-2">Ask</th>
+                    <th className="py-2 px-2">IV</th>
+                    <th className="py-2 px-2">Delta</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/10 font-mono">
+                  {currentLadder.length > 0 ? (
+                    currentLadder.map((row, rIdx) => {
+                      const c = row.call;
+                      const p = row.put;
+                      return (
+                        <tr key={rIdx} className="hover:bg-[#FAF9F5] transition-colors">
+                          <td className="py-2 px-2 text-[#74736A]">
+                            {c?.delta !== undefined ? c.delta.toFixed(2) : "—"}
+                          </td>
+                          <td className="py-2 px-2 text-[#74736A]">
+                            {c?.impliedVolatility ? `${(c.impliedVolatility * 100).toFixed(1)}%` : "—"}
+                          </td>
+                          <td className="py-2 px-2 text-emerald-800 font-bold">
+                            {c?.bid ? `$${c.bid}` : "—"}
+                          </td>
+                          <td className="py-2 px-2 text-[#232323] border-r border-black/10">
+                            {c?.ask ? `$${c.ask}` : "—"}
+                          </td>
+                          <td className="py-2 px-3 font-bold bg-[#EAEEDD] text-[#0B4FFF] border-r border-black/10">
+                            ${row.strike}
+                          </td>
+                          <td className="py-2 px-2 text-emerald-800 font-bold">
+                            {p?.bid ? `$${p.bid}` : "—"}
+                          </td>
+                          <td className="py-2 px-2 text-[#232323]">
+                            {p?.ask ? `$${p.ask}` : "—"}
+                          </td>
+                          <td className="py-2 px-2 text-[#74736A]">
+                            {p?.impliedVolatility ? `${(p.impliedVolatility * 100).toFixed(1)}%` : "—"}
+                          </td>
+                          <td className="py-2 px-2 text-[#74736A]">
+                            {p?.delta !== undefined ? p.delta.toFixed(2) : "—"}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={9} className="py-12 text-[#74736A]">
+                        No option contracts found for expiry {currentExpiry}.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        )}
+      </motion.div>
     </div>
   );
 }

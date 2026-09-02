@@ -180,20 +180,23 @@ export function PipelineVisual() {
         {/* Step 1: Compile (Prompt Card) */}
         <div className="relative z-10 flex flex-col items-center">
           {/* Mobile Tag only */}
-          <div className="tag-pill md:hidden flex items-center justify-center h-[28px] rounded-full border bg-[#F0EFE3] border-[#E2E1D3] text-[#a1a1aa] text-[10px] font-bold uppercase tracking-[0.2em] px-2 mb-4 z-20">
+          <div className="tag-pill md:hidden flex items-center justify-center h-[28px] border bg-[#F0EFE3] border-black/15 text-[#a1a1aa] text-[10px] font-bold uppercase tracking-[0.2em] px-2 mb-4 z-20">
             <Zap size={12} className="flex-shrink-0" />
             <div className="tag-wrap overflow-hidden flex-shrink-0" style={{ width: 0, opacity: 0 }}>
               <div className="whitespace-nowrap pl-1.5 pr-1">COMPILE</div>
             </div>
           </div>
           
-          <div className="step-card w-full bg-white rounded-3xl p-7 shadow-2xl shadow-black/5 md:mt-[64px] relative">
-            <h3 className="text-[15px] font-medium text-[#232323] leading-relaxed tracking-tight">
+          <div className="step-card w-full bg-[#EAEEDD] border border-black/15 p-6 md:mt-[64px] relative shadow-none">
+            <div className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider mb-2">
+              01 · Trader Mandate
+            </div>
+            <h3 className="text-[14px] font-medium text-[#232323] leading-relaxed tracking-tight">
               Trade only defined-risk SPY and QQQ options, capped at 5% maximum allocation.
             </h3>
             <div className="mt-5 flex justify-end">
-              <div className="card-inner-item w-8 h-8 rounded-lg bg-[#0B4FFF] flex items-center justify-center text-white shadow-lg shadow-[#0B4FFF]/30">
-                <ArrowUp size={16} strokeWidth={3} />
+              <div className="card-inner-item w-8 h-8 bg-[#0B4FFF] flex items-center justify-center text-white">
+                <ArrowUp size={16} strokeWidth={2.5} />
               </div>
             </div>
           </div>
@@ -202,28 +205,31 @@ export function PipelineVisual() {
         {/* Step 2: Propose (Floating Data) */}
         <div className="relative z-10 flex flex-col items-center">
           {/* Mobile Tag only */}
-          <div className="tag-pill md:hidden flex items-center justify-center h-[28px] rounded-full border bg-[#F0EFE3] border-[#E2E1D3] text-[#a1a1aa] text-[10px] font-bold uppercase tracking-[0.2em] px-2 mb-4 z-20">
+          <div className="tag-pill md:hidden flex items-center justify-center h-[28px] border bg-[#F0EFE3] border-black/15 text-[#a1a1aa] text-[10px] font-bold uppercase tracking-[0.2em] px-2 mb-4 z-20">
             <Zap size={12} className="flex-shrink-0" />
             <div className="tag-wrap overflow-hidden flex-shrink-0" style={{ width: 0, opacity: 0 }}>
               <div className="whitespace-nowrap pl-1.5 pr-1">PROPOSE</div>
             </div>
           </div>
           
-          <div className="step-card w-full md:mt-[136px]">
-            <div className="space-y-4 text-[13px] uppercase tracking-widest font-bold">
+          <div className="step-card w-full md:mt-[136px] bg-white border border-black/15 p-6 shadow-none">
+            <div className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider mb-3">
+              02 · Alpha Propose
+            </div>
+            <div className="space-y-3.5 text-[12px] uppercase tracking-wider font-bold">
               <div className="card-inner-item alpha-item-1 flex items-center gap-3">
-                <Loader2 size={16} className="spinner-icon alpha-spin-1 animate-spin text-[#0B4FFF] flex-shrink-0" />
-                <Check size={16} className="check-icon alpha-check-1 hidden text-[#0B4FFF] flex-shrink-0" />
+                <Loader2 size={15} className="spinner-icon alpha-spin-1 animate-spin text-[#0B4FFF] flex-shrink-0" />
+                <Check size={15} className="check-icon alpha-check-1 hidden text-[#0B4FFF] flex-shrink-0" />
                 <span>Scan Market Data</span>
               </div>
               <div className="card-inner-item alpha-item-2 flex items-center gap-3">
-                <Loader2 size={16} className="spinner-icon alpha-spin-2 animate-spin text-[#0B4FFF] flex-shrink-0" />
-                <Check size={16} className="check-icon alpha-check-2 hidden text-[#0B4FFF] flex-shrink-0" />
+                <Loader2 size={15} className="spinner-icon alpha-spin-2 animate-spin text-[#0B4FFF] flex-shrink-0" />
+                <Check size={15} className="check-icon alpha-check-2 hidden text-[#0B4FFF] flex-shrink-0" />
                 <span>Price Option Strikes</span>
               </div>
               <div className="card-inner-item alpha-item-3 flex items-center gap-3">
-                <Loader2 size={16} className="spinner-icon alpha-spin-3 animate-spin text-[#0B4FFF] flex-shrink-0" />
-                <Check size={16} className="check-icon alpha-check-3 hidden text-[#0B4FFF] flex-shrink-0" />
+                <Loader2 size={15} className="spinner-icon alpha-spin-3 animate-spin text-[#0B4FFF] flex-shrink-0" />
+                <Check size={15} className="check-icon alpha-check-3 hidden text-[#0B4FFF] flex-shrink-0" />
                 <span>Draft TradePermit</span>
               </div>
             </div>
@@ -233,26 +239,29 @@ export function PipelineVisual() {
         {/* Step 3: Verify (Floating Data) */}
         <div className="relative z-10 flex flex-col items-center">
           {/* Mobile Tag only */}
-          <div className="tag-pill md:hidden flex items-center justify-center h-[28px] rounded-full border bg-[#F0EFE3] border-[#E2E1D3] text-[#a1a1aa] text-[10px] font-bold uppercase tracking-[0.2em] px-2 mb-4 z-20">
+          <div className="tag-pill md:hidden flex items-center justify-center h-[28px] border bg-[#F0EFE3] border-black/15 text-[#a1a1aa] text-[10px] font-bold uppercase tracking-[0.2em] px-2 mb-4 z-20">
             <Zap size={12} className="flex-shrink-0" />
             <div className="tag-wrap overflow-hidden flex-shrink-0" style={{ width: 0, opacity: 0 }}>
               <div className="whitespace-nowrap pl-1.5 pr-1">VERIFY</div>
             </div>
           </div>
           
-          <div className="step-card w-full md:mt-[136px]">
-            <div className="space-y-7 text-[12px] font-mono font-bold tracking-wider uppercase text-[#74736A]">
-              <div className="card-inner-item verify-item-1 flex flex-col gap-1.5">
-                <div className="flex items-center gap-2 text-[#a1a1aa] mb-0.5">
-                  <ShieldCheck size={16} /> Hash Payload
+          <div className="step-card w-full md:mt-[136px] bg-white border border-black/15 p-6 shadow-none">
+            <div className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider mb-3">
+              03 · Kernel Check
+            </div>
+            <div className="space-y-4 text-[12px] font-mono font-bold tracking-wider uppercase text-[#74736A]">
+              <div className="card-inner-item verify-item-1 flex flex-col gap-1">
+                <div className="flex items-center gap-1.5 text-[#74736A] text-[10px]">
+                  <ShieldCheck size={14} /> HASH PAYLOAD
                 </div>
-                <span className="text-sm">e3b0c44298fc</span>
+                <span className="text-xs text-[#232323] font-bold">e3b0c44298fc</span>
               </div>
-              <div className="card-inner-item verify-item-2 flex flex-col gap-1.5">
-                <div className="flex items-center gap-2 text-[#a1a1aa] mb-0.5">
-                  <ShieldCheck size={16} /> Cryptography
+              <div className="card-inner-item verify-item-2 flex flex-col gap-1">
+                <div className="flex items-center gap-1.5 text-[#74736A] text-[10px]">
+                  <ShieldCheck size={14} /> CRYPTOGRAPHY
                 </div>
-                <span className="text-sm">Ed25519 OK</span>
+                <span className="text-xs text-[#0B4FFF] font-bold">ED25519 OK</span>
               </div>
             </div>
           </div>
@@ -261,20 +270,20 @@ export function PipelineVisual() {
         {/* Step 4: Execute (Graphic Variant) */}
         <div className="relative z-10 flex flex-col items-center">
           {/* Mobile Tag only */}
-          <div className="tag-pill md:hidden flex items-center justify-center h-[28px] rounded-full border bg-[#F0EFE3] border-[#E2E1D3] text-[#a1a1aa] text-[10px] font-bold uppercase tracking-[0.2em] px-2 mb-4 z-20">
+          <div className="tag-pill md:hidden flex items-center justify-center h-[28px] border bg-[#F0EFE3] border-black/15 text-[#a1a1aa] text-[10px] font-bold uppercase tracking-[0.2em] px-2 mb-4 z-20">
             <Zap size={12} className="flex-shrink-0" />
             <div className="tag-wrap overflow-hidden flex-shrink-0" style={{ width: 0, opacity: 0 }}>
               <div className="whitespace-nowrap pl-1.5 pr-1">EXECUTE</div>
             </div>
           </div>
           
-          <div className="step-card w-full md:mt-[136px] h-[300px] relative overflow-hidden rounded-[32px] shadow-2xl shadow-black/5">
-            <div className="execute-flash absolute inset-0 bg-[url('/variant-bg.jpg')] bg-cover bg-center scale-105" />
-            <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
+          <div className="step-card w-full md:mt-[136px] h-[190px] relative overflow-hidden border border-black/15 shadow-none bg-[#1A1A1A]">
+            <div className="execute-flash absolute inset-0 bg-[url('/variant-bg.jpg')] bg-cover bg-center" />
+            <div className="absolute inset-0 bg-black/20" />
             <div className="absolute inset-0 flex flex-col items-center justify-center relative z-10">
-              <div className="execute-text flex flex-col items-center gap-3">
-                <Zap size={36} className="text-white drop-shadow-md" />
-                <span className="text-[13px] font-mono font-bold tracking-[0.3em] text-white drop-shadow-md">
+              <div className="execute-text flex flex-col items-center gap-2">
+                <Zap size={28} className="text-white drop-shadow-sm" />
+                <span className="text-[12px] font-mono font-bold tracking-[0.25em] text-white">
                   ORDER SENT
                 </span>
               </div>

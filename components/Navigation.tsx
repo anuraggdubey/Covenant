@@ -6,10 +6,12 @@ import { usePathname } from "next/navigation";
 import { CovenantMark } from "@/components/CovenantMark";
 
 const PRIMARY_ROUTES = [
-  { label: "Overview", path: "/" },
   { label: "Candidates", path: "/candidates" },
   { label: "Mandates", path: "/mandates" },
   { label: "Break Me", path: "/break-me" },
+  { label: "Permits", path: "/permits" },
+  { label: "Proof", path: "/proof" },
+  { label: "Shadow Ledger", path: "/shadow-ledger" },
 ];
 
 export function Navigation() {
@@ -29,29 +31,37 @@ export function Navigation() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 bg-[#F0EFE3] border-t-4 border-[#0B4FFF]">
-      <div className="max-w-[1400px] mx-auto px-6 flex items-center justify-between h-[76px]">
+    <header className="relative w-full bg-[#F0EFE3] border-b border-black/10">
+      <div className="max-w-[1400px] mx-auto px-6 flex items-center justify-between h-[56px]">
         
-        {/* Left: Logo */}
-        <Link href="/" className="flex items-center gap-2.5" aria-label="Covenant home">
-          <span className="text-[#0B4FFF]"><CovenantMark size={28} /></span>
-          <span className="text-[22px] font-medium text-[#232323] tracking-tight leading-none lowercase">covenant</span>
+        {/* Left: Boxed Logo (matching reference style) */}
+        <Link 
+          href="/" 
+          className="flex items-center gap-2 px-2.5 py-1 border border-[#232323] hover:bg-black/[0.03] transition-colors" 
+          aria-label="Covenant home"
+        >
+          <span className="text-[#0B4FFF]">
+            <CovenantMark size={18} />
+          </span>
+          <span className="text-[14px] font-semibold text-[#232323] tracking-tight leading-none lowercase">
+            covenant
+          </span>
         </Link>
 
-        {/* Right: Links + CTA + Status */}
-        <div className="flex items-center gap-8">
+        {/* Right: Nav Links + CTA Button + Status Indicator */}
+        <div className="flex items-center gap-6 md:gap-7">
           
-          <nav className="hidden md:flex items-center gap-7" aria-label="Main navigation">
+          <nav className="hidden lg:flex items-center gap-6" aria-label="Main navigation">
             {PRIMARY_ROUTES.map((route) => {
               const isActive = pathname === route.path;
               return (
                 <Link
                   key={route.path}
                   href={route.path}
-                  className={`text-[15px] transition-colors ${
+                  className={`text-[13px] font-normal transition-colors ${
                     isActive
                       ? "text-[#232323] font-medium"
-                      : "text-[#74736A] hover:text-[#232323]"
+                      : "text-[#525252] hover:text-[#232323]"
                   }`}
                   aria-current={isActive ? "page" : undefined}
                 >
@@ -61,23 +71,25 @@ export function Navigation() {
             })}
           </nav>
 
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-4">
             <Link
               href="/mandates"
-              className="bg-[#0B4FFF] hover:bg-[#093ED9] text-white text-[15px] font-medium px-6 py-2.5 rounded-full transition-all hover:shadow-[0_4px_14px_0_rgba(11,79,255,0.39)]"
+              className="bg-[#0B4FFF] hover:bg-[#093ED9] text-white text-[13px] font-medium px-4 py-1.5 rounded-full transition-colors inline-flex items-center justify-center whitespace-nowrap shadow-none"
             >
-              Start
+              Start Studio
             </Link>
 
-            <div className="w-[1px] h-6 bg-[#D1D5DB]" /> {/* Vertical Separator */}
+            <div className="hidden sm:block w-[1px] h-3.5 bg-black/20" />
 
-            <div className="flex items-center gap-2 text-[15px] text-[#74736A]">
+            <div className="hidden sm:flex items-center gap-1.5 text-[12px] text-[#525252]">
               <span
-                className={`w-2 h-2 rounded-full ${
-                  health?.connected ? "bg-emerald-500" : "bg-amber-500"
+                className={`w-1.5 h-1.5 rounded-full ${
+                  health?.connected ? "bg-emerald-600" : "bg-amber-600"
                 }`}
               />
-              <span>{health?.connected ? "Connected" : health?.mode ?? "Paper"}</span>
+              <span className="font-mono text-[11px] uppercase tracking-wider">
+                {health?.connected ? "LIVE PAPER" : health?.mode === "PAPER_TRADING" ? "PAPER" : "LOCAL"}
+              </span>
             </div>
           </div>
 

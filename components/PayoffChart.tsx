@@ -20,35 +20,49 @@ export function PayoffChart({
   const entryAmount = Number.isFinite(signedPrice) ? Math.abs(signedPrice).toFixed(2) : limitPrice;
 
   return (
-    <div style={{ background: "var(--surface-sunken)", borderRadius: "8px", padding: "16px", border: "1px solid var(--border-subtle)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", gap: "12px", flexWrap: "wrap" }}>
-        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>
-          Expiration Payoff Envelope
+    <div className="bg-[#FAF9F5] border border-black/15 p-4 shadow-none">
+      <div className="flex justify-between items-center mb-3.5 flex-wrap gap-2 pb-2 border-b border-black/10">
+        <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider">
+          PAYOFF ENVELOPE
         </span>
-        <span className="badge badge-emerald" style={{ fontSize: "0.65rem" }}>
+        <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider bg-[#EAEEDD] text-emerald-900 border border-emerald-800/30">
           DEFINED RISK
         </span>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "14px" }}>
-        <Metric label={entryLabel} value={`$${entryAmount} / share`} color="var(--cyan)" />
-        <Metric label="Maximum Gain" value={`$${maxGain}`} color="var(--emerald)" />
-        <Metric label="Maximum Loss" value={`$${maxLoss}`} color="var(--rose)" />
-        <Metric label="Breakeven" value={`$${breakeven}`} color="var(--amber)" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <Metric label={entryLabel} value={`$${entryAmount}`} sublabel="/ share" color="text-[#0B4FFF]" />
+        <Metric label="Max Gain" value={`$${maxGain}`} color="text-emerald-800" />
+        <Metric label="Max Loss" value={`$${maxLoss}`} color="text-rose-700" />
+        <Metric label="Breakeven" value={`$${breakeven}`} color="text-[#232323]" />
       </div>
 
-      <div style={{ color: "var(--text-muted)", fontSize: "0.72rem", marginTop: "14px" }}>
-        {structure} payoff values are computed from the contract legs. Permit enforcement is not yet implemented.
+      <div className="text-[10px] font-mono text-[#74736A] mt-3 pt-2.5 border-t border-black/10 flex items-center justify-between">
+        <span>{structure.replace(/_/g, " ")}</span>
+        <span>BOUNDED TAIL ONLY</span>
       </div>
     </div>
   );
 }
 
-function Metric({ label, value, color }: { label: string; value: string; color: string }) {
+function Metric({
+  label,
+  value,
+  sublabel,
+  color,
+}: {
+  label: string;
+  value: string;
+  sublabel?: string;
+  color: string;
+}) {
   return (
-    <div>
-      <div style={{ color: "var(--text-muted)", fontSize: "0.7rem", textTransform: "uppercase" }}>{label}</div>
-      <div className="mono" style={{ color, fontWeight: 800, marginTop: "3px" }}>{value}</div>
+    <div className="bg-white p-2.5 border border-black/10">
+      <div className="text-[#74736A] text-[9px] font-mono uppercase font-bold tracking-wider">{label}</div>
+      <div className={`font-mono text-sm font-bold mt-0.5 ${color}`}>
+        {value}
+        {sublabel && <span className="text-[10px] font-normal text-[#74736A] ml-1">{sublabel}</span>}
+      </div>
     </div>
   );
 }

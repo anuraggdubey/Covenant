@@ -10,6 +10,10 @@ import { MarqueeTicker } from "@/components/MarqueeTicker";
 export const metadata: Metadata = {
   title: "Covenant — Proof-Carrying Options Agent",
   description: "The proof-carrying options agent that compiles trader mandates into verified policy before execution.",
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

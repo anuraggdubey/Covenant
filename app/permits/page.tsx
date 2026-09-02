@@ -1,8 +1,23 @@
-import { AuthorityBoundary } from "@/components/AuthorityBoundary";
+"use client";
 
-export const metadata = {
-  title: "Permit Console — Covenant"
-};
+import { motion, Variants } from "framer-motion";
+import {
+  FileKey2,
+  ShieldCheck,
+  Lock,
+  Clock,
+  Key,
+  AlertOctagon,
+  CheckCircle2,
+  ArrowRight,
+  ShieldAlert,
+  Layers,
+  FileCode2,
+  Terminal,
+  Zap,
+  Check
+} from "lucide-react";
+import Link from "next/link";
 
 type StepStatus = "IMPLEMENTED" | "BLOCKED";
 
@@ -61,7 +76,6 @@ const PERMIT_FLOW: {
   }
 ];
 
-/** Each of these is an actual test in tests/execution/executor.attacks.test.ts. */
 const ATTACKS = [
   {
     attack: "Swap a contract for a different strike",
@@ -131,143 +145,261 @@ const PROPERTIES = [
 export default function PermitsPage() {
   const implemented = PERMIT_FLOW.filter((s) => s.status === "IMPLEMENTED").length;
 
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+
+  const itemVariants: Variants = {
+    hidden: { y: 15, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { duration: 0.4 } }
+  };
+
   return (
-    <main className="page-container">
-      <header style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <span className="badge badge-cyan">Permit Console</span>
-          <span className="badge badge-emerald">
-            {implemented}/{PERMIT_FLOW.length} stages implemented
-          </span>
-          <span className="badge badge-amber">Live submission blocked</span>
-        </div>
-        <h1>Authority, issued one trade at a time</h1>
-        <p style={{ maxWidth: "68ch" }}>
-          Every order requires a cryptographically signed, short-lived permit bound to exact legs, a
-          price band, and the account and market snapshots the decision was made on. The strategy
-          cannot reach Alpaca; only the executor can, and only with a permit. That is the
-          &ldquo;powerless by construction&rdquo; guarantee, and the attacks below are the test suite
-          that keeps it honest.
-        </p>
-      </header>
-
-      <section className="glass-panel-glow">
-        <AuthorityBoundary />
-      </section>
-
-      <section>
-        <h2 style={{ marginBottom: 12 }}>Permit lifecycle</h2>
-        <div style={{ display: "grid", gap: 10 }}>
-          {PERMIT_FLOW.map((step) => (
-            <div
-              key={step.step}
-              className="glass-panel"
-              style={{
-                borderLeft: `3px solid ${
-                  step.status === "IMPLEMENTED" ? "var(--success)" : "var(--warning)"
-                }`,
-                display: "grid",
-                gridTemplateColumns: "28px 1fr auto",
-                gap: 16,
-                alignItems: "start"
-              }}
-            >
-              <div
-                className="mono"
-                style={{ fontWeight: 600, color: "var(--text-muted)", paddingTop: 2 }}
-              >
-                {step.step}
-              </div>
-              <div>
-                <div style={{ fontWeight: 600, color: "var(--text)" }}>{step.name}</div>
-                <div style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>{step.owner}</div>
-                <p style={{ marginTop: 6 }}>{step.description}</p>
-                <div className="mono" style={{ marginTop: 6, color: "var(--text-muted)" }}>
-                  {step.evidence}
-                </div>
-              </div>
-              <span
-                className={`badge ${step.status === "IMPLEMENTED" ? "badge-emerald" : "badge-amber"}`}
-              >
-                {step.status === "IMPLEMENTED" ? "Implemented" : "Blocked"}
+    <div className="flex-1 w-full bg-[#F0EFE3] min-h-screen">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="max-w-[1400px] mx-auto px-6 py-12 md:py-16 flex flex-col gap-10"
+      >
+        {/* Header */}
+        <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-black/15">
+          <div>
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-mono font-bold uppercase tracking-wider bg-white border border-black/15 text-[#232323]">
+                PERMIT CONSOLE · LANE B
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-mono font-bold uppercase tracking-wider bg-[#EAEEDD] border border-black/15 text-emerald-900">
+                {implemented}/{PERMIT_FLOW.length} STAGES IMPLEMENTED
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-mono font-bold uppercase tracking-wider bg-amber-50 border border-black/15 text-amber-900">
+                PAPER ONLY
               </span>
             </div>
-          ))}
-        </div>
-      </section>
+            <h1 className="text-3xl md:text-5xl font-medium text-[#232323] tracking-tight">
+              Authority, issued one trade at a time
+            </h1>
+            <p className="text-base text-[#74736A] mt-2 max-w-3xl">
+              Every order requires a cryptographically signed, short-lived permit bound to exact legs, a price band, and verified snapshots. The strategy cannot reach Alpaca; only the executor can, and only with a permit.
+            </p>
+          </div>
 
-      <section className="glass-panel-glow">
-        <h2>Try to break it</h2>
-        <small>
-          Each row is a test. Every one asserts the broker was never contacted — a gate that rejects
-          after calling the broker is not a gate.
-        </small>
-        <div className="table-scroll" style={{ marginTop: 14 }}>
-          <table>
-            <thead>
-              <tr>
-                <th>Attack</th>
-                <th style={{ width: 260 }}>Rejected as</th>
-                <th>Why it cannot work</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ATTACKS.map((row) => (
-                <tr key={row.attack}>
-                  <td style={{ color: "var(--text)" }}>{row.attack}</td>
-                  <td>
-                    <span className="mono" style={{ color: "var(--danger)" }}>
-                      {row.rejection}
-                    </span>
-                  </td>
-                  <td>{row.note}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="glass-panel">
-        <h2>TradePermit schema</h2>
-        <small>Frozen. See IMPLEMENTATION.md §6.</small>
-        <div className="table-scroll" style={{ marginTop: 14 }}>
-          <table>
-            <thead>
-              <tr>
-                <th style={{ width: 300 }}>Field</th>
-                <th style={{ width: 130 }}>Type</th>
-                <th>Purpose</th>
-              </tr>
-            </thead>
-            <tbody>
-              {PERMIT_FIELDS.map((f) => (
-                <tr key={f.field}>
-                  <td className="mono" style={{ color: "var(--accent)" }}>
-                    {f.field}
-                  </td>
-                  <td className="mono">{f.type}</td>
-                  <td>{f.description}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section>
-        <h2 style={{ marginBottom: 12 }}>Security properties</h2>
-        <div className="grid-2">
-          {PROPERTIES.map((prop) => (
-            <div key={prop.title} className="glass-panel">
-              <h3>{prop.title}</h3>
-              <p style={{ marginTop: 6 }}>{prop.desc}</p>
+          <div className="bg-[#EAEEDD] border border-black/15 p-4 min-w-[260px]">
+            <div className="flex items-center justify-between gap-2 text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider">
+              <span>Key Isolation</span>
+              <span className="text-emerald-900 bg-white border border-black/10 px-1.5 py-0.5">
+                ENFORCED
+              </span>
             </div>
-          ))}
-        </div>
-      </section>
+            <div className="mt-2 text-sm font-bold text-[#232323]">
+              Ed25519 Capability Model
+            </div>
+            <div className="mt-1 text-xs text-[#74736A] font-mono">
+              60-second TTL · Single-Use Nonce
+            </div>
+          </div>
+        </motion.div>
 
-      <small>Paper trading only. Not investment advice. Options involve significant risk.</small>
-    </main>
+        {/* Telemetry Stat Cards */}
+        <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-[#EAEEDD] border border-black/15 p-5">
+            <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">
+              01 · SIGNING PRIVILEGE
+            </span>
+            <div className="text-xl md:text-2xl font-bold font-mono text-[#232323] mt-1">
+              lib/permits/sign.ts
+            </div>
+            <span className="text-[10px] text-[#74736A] font-mono mt-1 block">Only file with private key</span>
+          </div>
+
+          <div className="bg-white border border-black/15 p-5">
+            <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">
+              02 · PERMIT LIFESPAN
+            </span>
+            <div className="text-2xl md:text-3xl font-bold font-mono text-[#0B4FFF] mt-1">
+              60 SECONDS
+            </div>
+            <span className="text-[10px] text-[#74736A] font-mono mt-1 block">Strict ephemeral TTL</span>
+          </div>
+
+          <div className="bg-white border border-black/15 p-5">
+            <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">
+              03 · EXECUTOR BOUNDARY
+            </span>
+            <div className="text-xl md:text-2xl font-bold font-mono text-emerald-800 mt-1">
+              14 CHECKS
+            </div>
+            <span className="text-[10px] text-[#74736A] font-mono mt-1 block">Pre-flight verification</span>
+          </div>
+
+          <div className="bg-white border border-black/15 p-5">
+            <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">
+              04 · REPLAY WINDOW
+            </span>
+            <div className="text-2xl md:text-3xl font-bold font-mono text-rose-700 mt-1">
+              0 SECONDS
+            </div>
+            <span className="text-[10px] text-[#74736A] font-mono mt-1 block">Nonces consumed prior to send</span>
+          </div>
+        </motion.div>
+
+        {/* 1. Permit Lifecycle Stages Card (Image 4 & 5 Style) */}
+        <motion.div variants={itemVariants} className="bg-white border border-black/15 flex flex-col">
+          <div className="p-5 md:p-6 bg-[#EAEEDD] border-b border-black/15 flex items-center justify-between">
+            <div className="text-[11px] font-mono font-bold text-[#74736A] uppercase tracking-widest">
+              01 · PERMIT LIFECYCLE PIPELINE
+            </div>
+            <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-white border border-black/15 text-[#232323]">
+              ZERO TRUST STACK
+            </span>
+          </div>
+
+          <div className="divide-y divide-black/15">
+            {PERMIT_FLOW.map((step) => (
+              <div key={step.step} className="p-6 flex flex-col md:flex-row md:items-start justify-between gap-6 hover:bg-[#FAF9F5] transition-colors">
+                <div className="flex items-start gap-4">
+                  <span className="w-8 h-8 bg-[#EAEEDD] border border-black/15 flex items-center justify-center font-mono text-xs font-bold text-[#232323] shrink-0">
+                    {String(step.step).padStart(2, "0")}
+                  </span>
+                  <div>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h3 className="text-base font-bold text-[#232323]">{step.name}</h3>
+                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-white border border-black/15 text-[#74736A]">
+                        {step.owner}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#74736A] mt-1.5 leading-relaxed max-w-3xl">
+                      {step.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0 self-start md:self-center">
+                  <span className="text-[11px] font-mono text-[#74736A] hidden lg:block">
+                    {step.evidence}
+                  </span>
+                  <span
+                    className={`px-2.5 py-1 text-[10px] font-mono font-bold uppercase tracking-wider border ${
+                      step.status === "IMPLEMENTED"
+                        ? "bg-[#EAEEDD] text-emerald-900 border-emerald-800/30"
+                        : "bg-amber-50 text-amber-900 border-amber-800/30"
+                    }`}
+                  >
+                    {step.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Bottom Card Footer */}
+          <div className="flex items-stretch border-t border-black/15 bg-white">
+            <div className="flex-1 px-5 py-3.5 text-xs font-mono font-bold uppercase tracking-wider text-[#232323]">
+              Deterministic Execution Pipeline
+            </div>
+            <Link
+              href="/proof"
+              className="w-12 h-11 flex items-center justify-center border-l border-black/15 bg-[#EAEEDD] hover:bg-[#DDE2CF] text-[#232323] transition-colors"
+            >
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </motion.div>
+
+        {/* 2. Attack Scenarios & Rejection Table Card */}
+        <motion.div variants={itemVariants} className="bg-white border border-black/15 flex flex-col">
+          <div className="p-5 md:p-6 bg-[#EAEEDD] border-b border-black/15">
+            <div className="text-[11px] font-mono font-bold text-[#74736A] uppercase tracking-widest">
+              02 · HARDENED ATTACK TEST SUITE
+            </div>
+            <p className="text-xs text-[#74736A] font-mono mt-0.5">
+              Exercised in tests/execution/executor.attacks.test.ts against adversarial modifications.
+            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse font-mono">
+              <thead>
+                <tr className="bg-[#FAF9F5] text-[#74736A] uppercase text-[10px] font-bold border-b border-black/10">
+                  <th className="py-2.5 px-4 w-72">Adversarial Action</th>
+                  <th className="py-2.5 px-4 w-80 text-rose-800">Deterministic Rejection Code</th>
+                  <th className="py-2.5 px-4">Verification Defense Logic</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-black/10">
+                {ATTACKS.map((atk, i) => (
+                  <tr key={i} className="hover:bg-[#FAF9F5] transition-colors">
+                    <td className="py-3 px-4 font-bold text-[#232323]">{atk.attack}</td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-rose-50 text-rose-900 border border-rose-800/30">
+                        {atk.rejection}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-[#74736A] font-sans text-xs">{atk.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Bottom Card Footer */}
+          <div className="flex items-stretch border-t border-black/15 bg-white">
+            <div className="flex-1 px-5 py-3.5 text-xs font-mono font-bold uppercase tracking-wider text-[#232323]">
+              14 Pre-submission Attack Guards Verified
+            </div>
+            <div className="w-12 h-11 flex items-center justify-center border-l border-black/15 bg-[#EAEEDD] text-[#232323]">
+              <ArrowRight className="w-4 h-4" />
+            </div>
+          </div>
+        </motion.div>
+
+        {/* 3. TradePermit JSON Schema & Properties */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left: Schema Fields (7 cols) */}
+          <motion.div variants={itemVariants} className="lg:col-span-7 bg-white border border-black/15 flex flex-col">
+            <div className="p-5 md:p-6 bg-[#EAEEDD] border-b border-black/15">
+              <div className="text-[11px] font-mono font-bold text-[#74736A] uppercase tracking-widest">
+                03 · TRADE PERMIT SPECIFICATION
+              </div>
+              <p className="text-xs text-[#74736A] font-mono mt-0.5">
+                Exact schema signed by Ed25519 over canonical RFC-8785 JSON.
+              </p>
+            </div>
+
+            <div className="divide-y divide-black/10 p-6 space-y-3">
+              {PERMIT_FIELDS.map((f, idx) => (
+                <div key={idx} className="pt-3 first:pt-0 flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 text-xs font-mono">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-[#0B4FFF]">{f.field}</span>
+                    <span className="text-[10px] text-[#74736A]">({f.type})</span>
+                  </div>
+                  <span className="text-[#74736A] font-sans text-xs sm:text-right">{f.description}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Right: Core Properties (5 cols) */}
+          <motion.div variants={itemVariants} className="lg:col-span-5 flex flex-col gap-4">
+            {PROPERTIES.map((prop, idx) => (
+              <div key={idx} className="bg-white border border-black/15 p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-mono text-xs font-bold text-[#232323]">
+                    {String(idx + 1).padStart(2, "0")}
+                  </span>
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-[#232323]">
+                    {prop.title}
+                  </h4>
+                </div>
+                <p className="text-xs text-[#74736A] leading-relaxed">
+                  {prop.desc}
+                </p>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </motion.div>
+    </div>
   );
 }

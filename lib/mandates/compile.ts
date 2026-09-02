@@ -16,6 +16,7 @@
  */
 
 import {
+  ACCOUNT_EQUITY_USD,
   EQUITY_RATIO_FIELDS,
   profileLimits,
   toPolicyUnits,
@@ -23,6 +24,11 @@ import {
 } from "@/lib/mandates/profiles";
 import { computePolicyHash } from "@/lib/hashes";
 import { ALL_INVARIANTS, type Policy, type RiskProfile, type Structure, type Underlying } from "@/types/domain";
+
+export interface CompileOptions {
+  riskProfile?: RiskProfile;
+  riskOverrides?: Partial<ProfileLimits>;
+}
 
 export type ContradictionCode =
   | "FORCED_TRADE_CONFLICT"
@@ -123,27 +129,61 @@ function detectOverrides(text: string, base: ProfileLimits): Partial<ProfileLimi
 
   const perTrade = firstNumber(text, [
     /(\d+(?:\.\d+)?)\s*%\s*per-trade/i,
-    /up to\s*(\d+(?:\.\d+)?)\s*%\s*equity loss on one trade/i
+    /up to\s*(\d+(?:\.\d+)?)\s*%\s*equity loss on one trade/i,
+    /risk at most\s*(\d+(?:\.\d+)?)\s*%\s*of equity on one trade/i,
+    /risk at most\s*(\d+(?:\.\d+)?)\s*%\s*on one trade/i,
+    /max loss\s*(\d+(?:\.\d+)?)\s*%\s*per trade/i
   ]);
+
+  const perTradeDollar = firstNumber(text, [
+    /max loss\s*\$(\d+(?:\.\d+)?)\s*per trade/i,
+    /risk at most\s*\$(\d+(?:\.\d+)?)\s*(?:of equity )?on one trade/i
+  ]);
+
   const heat = firstNumber(text, [
     /(\d+(?:\.\d+)?)\s*%\s*portfolio heat/i,
-    /heat must never exceed\s*(\d+(?:\.\d+)?)\s*%/i
+    /heat must never exceed\s*(\d+(?:\.\d+)?)\s*%/i,
+    /and\s*(\d+(?:\.\d+)?)\s*%\s*across the book/i
   ]);
-  const halt = firstNumber(text, [/(\d+(?:\.\d+)?)\s*%\s*daily halt/i]);
-  const minDte = firstNumber(text, [/at least\s*(\d+)\s*DTE/i]);
-  const maxDte = firstNumber(text, [/no more than\s*(\d+)\s*DTE/i]);
+
+  const heatDollar = firstNumber(text, [
+    /portfolio heat\s*\$(\d+(?:\.\d+)?)/i,
+    /heat must never exceed\s*\$(\d+(?:\.\d+)?)/i
+  ]);
+
+  const halt = firstNumber(text, [
+    /(\d+(?:\.\d+)?)\s*%\s*daily halt/i,
+    /halt for the day at\s*-?(\d+(?:\.\d+)?)\s*%/i
+  ]);
+
+  const haltDollar = firstNumber(text, [
+    /daily halt\s*\$(\d+(?:\.\d+)?)/i,
+    /halt for the day at\s*-?\$(\d+(?:\.\d+)?)/i
+  ]);
+
+  const minDte = firstNumber(text, [/at least\s*(\d+)\s*DTE/i, /hold\s*(\d+)\s*-\s*\d+\s*days/i]);
+  const maxDte = firstNumber(text, [/no more than\s*(\d+)\s*DTE/i, /hold\s*\d+\s*-\s*(\d+)\s*days/i]);
 
   // Only record a value that actually DIFFERS from the profile. "Keep the 1%
   // per-trade maximum" restates the Aggressive default and is not an override.
   if (perTrade !== null && perTrade / 100 !== base.perTradeMaxLossPct) {
     overrides.perTradeMaxLossPct = perTrade / 100;
+  } else if (perTradeDollar !== null && perTradeDollar / ACCOUNT_EQUITY_USD !== base.perTradeMaxLossPct) {
+    overrides.perTradeMaxLossPct = perTradeDollar / ACCOUNT_EQUITY_USD;
   }
+
   if (heat !== null && heat / 100 !== base.portfolioHeatMaxLossPct) {
     overrides.portfolioHeatMaxLossPct = heat / 100;
+  } else if (heatDollar !== null && heatDollar / ACCOUNT_EQUITY_USD !== base.portfolioHeatMaxLossPct) {
+    overrides.portfolioHeatMaxLossPct = heatDollar / ACCOUNT_EQUITY_USD;
   }
+
   if (halt !== null && -(halt / 100) !== base.dailyHaltPct) {
     overrides.dailyHaltPct = -(halt / 100);
+  } else if (haltDollar !== null && -(haltDollar / ACCOUNT_EQUITY_USD) !== base.dailyHaltPct) {
+    overrides.dailyHaltPct = -(haltDollar / ACCOUNT_EQUITY_USD);
   }
+
   if (minDte !== null && minDte !== base.minDte) overrides.minDte = minDte;
   if (maxDte !== null && maxDte !== base.maxDte) overrides.maxDte = maxDte;
 
@@ -219,10 +259,14 @@ function detectContradictions(text: string, limits: ProfileLimits): Contradictio
 // Compile
 // ---------------------------------------------------------------------------
 
-export function compileMandate(mandateText: string): CompileResult {
-  const riskProfile = detectProfile(mandateText);
+export function compileMandate(mandateText: string, options?: CompileOptions): CompileResult {
+  const riskProfile = options?.riskProfile ?? detectProfile(mandateText);
   const base = profileLimits(riskProfile);
-  const riskOverrides = detectOverrides(mandateText, base);
+  const parsedOverrides = detectOverrides(mandateText, base);
+  const riskOverrides: Partial<ProfileLimits> = {
+    ...parsedOverrides,
+    ...(options?.riskOverrides ?? {})
+  };
   const effective: ProfileLimits = { ...base, ...riskOverrides };
 
   const allowedUnderlyings = detectUnderlyings(mandateText);

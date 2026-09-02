@@ -11,14 +11,14 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "preflight": "tsx scripts/preflight.ts",
     "verify": "tsx scripts/verify.ts",
     "audit": "tsx scripts/audit.ts",
     "keygen": "tsx scripts/keygen.ts",
-    "db:migrate": "drizzle-kit migrate",
-    "db:generate": "drizzle-kit generate",
+    "preflight": "tsx scripts/preflight.ts",
     "tick": "tsx scripts/tick.ts",
-    "validate:walk-forward": "tsx scripts/validate-walk-forward.ts"
+    "db:migrate": "tsx scripts/db-migrate.ts",
+    "validate:walk-forward": "tsx scripts/validate-walk-forward.ts",
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "@neon/config": "^1.2.0",

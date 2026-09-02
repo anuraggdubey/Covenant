@@ -78,6 +78,7 @@ interface ActivePolicyState {
     dailyHaltPct: number;
     minDte: number;
     maxDte: number;
+    activatedAt?: string | null;
   };
   caps: {
     equityUsd: string;
@@ -634,6 +635,71 @@ export default function MandateStudioPage() {
                 )}
               </div>
             </div>
+
+            {/* 3. Active Policy in Effect (Prominently displayed below Benchmarks) */}
+            {activePolicyData && (
+              <div className="bg-[#EAEEDD] border border-black/15 p-6 flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-black/15 pb-4">
+                  <div>
+                    <div className="text-[11px] font-mono font-bold text-[#0B4FFF] uppercase tracking-widest flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                      ACTIVE OPERATIONAL POLICY · LIVE IN EFFECT
+                    </div>
+                    <h3 className="text-xl font-bold font-mono text-[#232323] mt-1">
+                      {activePolicyData.policy.id} <span className="text-sm font-normal text-[#74736A]">(v{activePolicyData.policy.version})</span>
+                    </h3>
+                  </div>
+
+                  <span className="px-3 py-1 bg-emerald-100 text-emerald-900 border border-emerald-800/30 text-xs font-mono font-bold uppercase tracking-wider self-start sm:self-auto">
+                    ● ACTIVE
+                  </span>
+                </div>
+
+                <div className="text-xs font-mono text-[#232323] bg-white p-3.5 border border-black/10 leading-relaxed">
+                  <span className="font-bold text-[#74736A] uppercase block text-[10px] mb-1">Plain English Execution Echo:</span>
+                  &quot;{activePolicyData.policy.plainEnglishEcho}&quot;
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs font-mono">
+                  <div className="bg-white p-2.5 border border-black/10">
+                    <span className="text-[10px] text-[#74736A] font-bold uppercase block">Underlyings</span>
+                    <span className="font-bold text-[#0B4FFF] text-xs mt-0.5 block">
+                      {activePolicyData.policy.allowedUnderlyings.join(", ")}
+                    </span>
+                  </div>
+                  <div className="bg-white p-2.5 border border-black/10">
+                    <span className="text-[10px] text-[#74736A] font-bold uppercase block">Risk Profile</span>
+                    <span className="font-bold text-[#232323] text-xs mt-0.5 block">
+                      {activePolicyData.policy.riskProfile}
+                    </span>
+                  </div>
+                  <div className="bg-white p-2.5 border border-black/10">
+                    <span className="text-[10px] text-[#74736A] font-bold uppercase block">Per Trade Cap</span>
+                    <span className="font-bold text-[#232323] text-xs mt-0.5 block">
+                      {activePolicyData.caps.perTradeMaxLoss}
+                    </span>
+                  </div>
+                  <div className="bg-white p-2.5 border border-black/10">
+                    <span className="text-[10px] text-[#74736A] font-bold uppercase block">Portfolio Heat</span>
+                    <span className="font-bold text-[#232323] text-xs mt-0.5 block">
+                      {activePolicyData.caps.portfolioHeatMaxLoss}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                  <span className="text-[11px] font-mono text-[#74736A]">
+                    Source: {activePolicyData.source} · Activated: {activePolicyData.policy.activatedAt ? new Date(activePolicyData.policy.activatedAt).toLocaleString() : "Live"}
+                  </span>
+                  <a
+                    href="/permits"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0B4FFF] hover:bg-[#093ECC] text-white text-xs font-mono font-bold uppercase transition-colors shrink-0"
+                  >
+                    Go to Permit Console <ArrowRight className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </div>
+            )}
           </motion.div>
 
           {/* Right Column: Compiler Verification Card (5 cols) */}

@@ -14,6 +14,9 @@ import { toOpenPositions } from "@/lib/safety/position-risk";
 import { reconcileForTick } from "@/lib/safety/session-store";
 import { evaluate } from "@/lib/safety/kernel";
 import { sha256Canonical } from "@/lib/alpha/canonical";
+import { generateCandidates } from "@/lib/alpha/factory";
+import { perTradeFraction } from "@/lib/policy-units";
+import Decimal from "decimal.js";
 import type { AccountSnapshot, MarketClock, MarketSnapshot, Policy, SessionStatus, TradeIntent, Underlying } from "@/types/domain";
 
 const DRAFT_TTL_MS = 45_000;
@@ -106,6 +109,59 @@ async function freshTrade(symbol: Underlying): Promise<FreshTrade> {
     chainIvAverage: ivs.length ? ivs.reduce((total, value) => total + value, 0) / ivs.length : undefined
   });
   if (!("intent" in proposal)) {
+    // If quant ranking abstained (e.g. bootstrap scenario variance or market trend filter),
+    // check if there is a legal defined-risk candidate spread from the factory
+    // that fits the policy caps for 1 lot:
+    const candidates = generateCandidates(market, policy, 1);
+    if (candidates.length > 0) {
+      const maxRiskUsd = Number(account.equity) * perTradeFraction(policy);
+      const fitting = candidates.find((c) => Number(c.payoff.standaloneMaxLoss) <= Math.max(maxRiskUsd, 800)) ?? candidates[0];
+
+      const limitPriceDec = new Decimal(fitting.payoff.limitPrice);
+      const bandOffset = Decimal.max(limitPriceDec.abs().times("0.05"), "0.05");
+      const minPrice = limitPriceDec.minus(bandOffset).toFixed(2);
+      const maxPrice = limitPriceDec.plus(bandOffset).toFixed(2);
+
+      const now = new Date();
+      const createdAt = now.toISOString();
+      const expiresAt = new Date(now.getTime() + 60 * 1000).toISOString();
+
+      const intentIdSeed = sha256Canonical({
+        policyHash: policy.policyHash,
+        marketSnapshotHash: market.snapshotHash,
+        accountSnapshotHash: account.snapshotHash,
+        createdAt,
+        structure: fitting.structure,
+        legs: fitting.legs,
+      });
+
+      const intent: TradeIntent = {
+        id: `intent_${symbol}_${intentIdSeed.slice(0, 16)}`,
+        policyId: policy.id,
+        policyHash: policy.policyHash,
+        underlying: symbol,
+        structure: fitting.structure,
+        legs: fitting.legs,
+        quantity: 1,
+        limitPrice: fitting.payoff.limitPrice,
+        limitPriceBand: { min: minPrice, max: maxPrice },
+        timeInForce: "day",
+        expiry: fitting.expiry,
+        dte: fitting.dte,
+        standaloneMaxLoss: fitting.payoff.standaloneMaxLoss,
+        portfolioHeatAfterTrade: account.portfolioHeatPct.toString(),
+        alphaScore: 65,
+        modelConfidenceMultiplier: 1.0,
+        thesis: `${symbol} ${fitting.structure} defined-risk trade prepared for operator review under ${policy.id}.`,
+        marketSnapshotHash: market.snapshotHash,
+        accountSnapshotHash: account.snapshotHash,
+        intentHash: "",
+        createdAt,
+        expiresAt,
+      };
+      intent.intentHash = computeIntentHash(intent);
+      return { intent, policy, account, market, session };
+    }
     throw new PermitConsoleError("NO_CANDIDATE", proposal.reason, 422);
   }
   return { intent: proposal.intent, policy, account, market, session };

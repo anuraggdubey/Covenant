@@ -6,7 +6,6 @@ import { ScrollProgress } from "@/components/ScrollProgress";
 import { BackgroundOrbs } from "@/components/BackgroundOrbs";
 import { VerticalGuides } from "@/components/VerticalGuides";
 import { MarqueeTicker } from "@/components/MarqueeTicker";
-import { SiteFooter } from "@/components/SiteFooter";
 
 export const metadata: Metadata = {
   title: "Covenant — Proof-Carrying Options Agent",
@@ -50,7 +49,6 @@ export default function RootLayout({
         {/* Content layers */}
         <Navigation />
         <main className="flex-1 flex flex-col relative z-10">{children}</main>
-        <SiteFooter />
       </body>
     </html>
   );

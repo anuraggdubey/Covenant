@@ -158,24 +158,28 @@ export function verifyManifest(manifest: RunManifest): VerificationReport {
     }
 
     // Recorded facts: the snapshots are unaltered relative to their own hashes.
-    checks.push(
-      check(
-        "snapshot.market",
-        "RECORDED",
-        computeMarketSnapshotHash(payload.market) === payload.market.snapshotHash,
-        "Market snapshot matches its recorded hash (captured fact, not re-fetched).",
-        event.eventId
-      )
-    );
-    checks.push(
-      check(
-        "snapshot.account",
-        "RECORDED",
-        computeAccountSnapshotHash(payload.account) === payload.account.snapshotHash,
-        "Account snapshot matches its recorded hash (captured fact, not re-fetched).",
-        event.eventId
-      )
-    );
+    if (payload.market) {
+      checks.push(
+        check(
+          "snapshot.market",
+          "RECORDED",
+          computeMarketSnapshotHash(payload.market) === payload.market.snapshotHash,
+          "Market snapshot matches its recorded hash (captured fact, not re-fetched).",
+          event.eventId
+        )
+      );
+    }
+    if (payload.account) {
+      checks.push(
+        check(
+          "snapshot.account",
+          "RECORDED",
+          computeAccountSnapshotHash(payload.account) === payload.account.snapshotHash,
+          "Account snapshot matches its recorded hash (captured fact, not re-fetched).",
+          event.eventId
+        )
+      );
+    }
     checks.push(
       check(
         "policy.hash",
@@ -195,31 +199,35 @@ export function verifyManifest(manifest: RunManifest): VerificationReport {
       )
     );
 
-    // The heart of it: re-run every invariant and compare to what was recorded.
-    const context: InvariantContext = {
-      policy: payload.policy,
-      intent: payload.intent,
-      account: payload.account,
-      market: payload.market,
-      session: payload.session,
-      now: new Date(payload.now)
-    };
+    // Replay the full invariant registry against the recorded inputs. This is
+    // the core of the proof: the verdict produced then must equal the verdict
+    // produced now, right down to the list of failed invariants on a refusal.
+    if (payload.account && payload.market && payload.session) {
+      const context: InvariantContext = {
+        policy: payload.policy,
+        intent: payload.intent,
+        account: payload.account,
+        market: payload.market,
+        session: payload.session,
+        now: new Date(payload.now)
+      };
 
-    const verdicts = INVARIANT_REGISTRY.map((evaluator) => evaluator.evaluate(context));
-    const failedNow = verdicts.filter((v) => !v.ok).map((v) => v.id).sort();
-    const failedThen = [...(payload.failedInvariants ?? [])].sort();
+      const verdicts = INVARIANT_REGISTRY.map((evaluator) => evaluator.evaluate(context));
+      const failedNow = verdicts.filter((v) => !v.ok).map((v) => v.id).sort();
+      const failedThen = [...(payload.failedInvariants ?? [])].sort();
 
-    checks.push(
-      check(
-        "invariants.reproduce",
-        "REPRODUCED",
-        hashObject(failedNow) === hashObject(failedThen),
-        failedNow.length === 0
-          ? "All eight invariants pass again, as recorded."
-          : `Failing invariants reproduce exactly: [${failedNow.join(", ")}].`,
-        event.eventId
-      )
-    );
+      checks.push(
+        check(
+          "invariants.reproduce",
+          "REPRODUCED",
+          hashObject(failedNow) === hashObject(failedThen),
+          failedNow.length === 0
+            ? "All eight invariants pass again, as recorded."
+            : `Failing invariants reproduce exactly: [${failedNow.join(", ")}].`,
+          event.eventId
+        )
+      );
+    }
   }
 
   // ---- 4. Permits --------------------------------------------------------

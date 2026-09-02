@@ -19,11 +19,20 @@ import {
   Lock,
   Key,
   Info,
-  ArrowRight
+  ArrowRight,
+  Clock,
+  Calendar,
+  Zap,
 } from "lucide-react";
 import type { CovenantEvent, RunManifest } from "@/types/domain";
 import type { VerificationReport } from "@/lib/audit/verify";
-import manifestFallback from "@/demo/run_manifest.json";
+import {
+  ClickableHash,
+  HashInspectorModal,
+  formatDateTime,
+  shortHash,
+  type HashInspectorData,
+} from "@/components/HashInspectorModal";
 
 interface ProofSourceSummary {
   id: string;
@@ -42,11 +51,6 @@ interface ProofPayload {
   notes: string[];
 }
 
-function shortHash(hash: string | null): string {
-  if (hash === null || hash === "") return "—";
-  return `${hash.slice(0, 10)}…${hash.slice(-6)}`;
-}
-
 const EVENT_TONES: Record<string, { bg: string; text: string; border: string }> = {
   PERMIT_SIGNED: { bg: "bg-[#EAEEDD]", text: "text-emerald-900", border: "border-emerald-800/30" },
   ORDER_SUBMITTED: { bg: "bg-[#EAEEDD]", text: "text-emerald-900", border: "border-emerald-800/30" },
@@ -58,7 +62,7 @@ const EVENT_TONES: Record<string, { bg: string; text: string; border: string }> 
   KERNEL_REJECTED: { bg: "bg-rose-50", text: "text-rose-900", border: "border-rose-800/30" },
   KERNEL_ABSTAINED: { bg: "bg-amber-50", text: "text-amber-900", border: "border-amber-800/30" },
   PERMIT_REPLAY_REJECTED: { bg: "bg-rose-50", text: "text-rose-900", border: "border-rose-800/30" },
-  HALT_TRIGGERED: { bg: "bg-amber-50", text: "text-amber-900", border: "border-amber-800/30" }
+  HALT_TRIGGERED: { bg: "bg-amber-50", text: "text-amber-900", border: "border-amber-800/30" },
 };
 
 function decisionSummary(payload: unknown): string | null {
@@ -66,31 +70,50 @@ function decisionSummary(payload: unknown): string | null {
   const p = payload as Record<string, unknown>;
   if (typeof p.reason === "string") return p.reason;
   if (typeof p.orderId === "string") return `Alpaca order ${p.orderId}`;
+  if (p.order && typeof p.order === "object" && "orderId" in p.order) {
+    return `Alpaca order ${(p.order as { orderId: string }).orderId}`;
+  }
   return null;
 }
 
 export default function ProofExplorerPage() {
   const [sources, setSources] = useState<ProofSourceSummary[]>([]);
-  const [selectedSourceId, setSelectedSourceId] = useState<string>("demo");
+  const [selectedSourceId, setSelectedSourceId] = useState<string>("");
   const [proof, setProof] = useState<ProofPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedTerminal, setCopiedTerminal] = useState(false);
   const [checkFilter, setCheckFilter] = useState<"ALL" | "REPRODUCED" | "RECORDED">("ALL");
   const [searchCheck, setSearchCheck] = useState("");
+  const [inspectData, setInspectData] = useState<HashInspectorData | null>(null);
 
-  const fetchSourcesAndProof = async (sourceId: string) => {
+  const fetchSourcesAndProof = async (sourceIdToFetch?: string) => {
     setLoading(true);
     try {
       const sourcesRes = await fetch("/api/proof");
+      let activeId = sourceIdToFetch || selectedSourceId;
+
       if (sourcesRes.ok) {
         const data = await sourcesRes.json();
-        setSources(data.sources ?? []);
+        const list: ProofSourceSummary[] = data.sources ?? [];
+        setSources(list);
+
+        if (!activeId && list.length > 0) {
+          // Prioritize real live transactions & permits first
+          const firstLive = list.find((s) => s.kind === "LIVE");
+          activeId = firstLive ? firstLive.id : list[0].id;
+          setSelectedSourceId(activeId);
+        }
       }
 
+      if (!activeId) activeId = "demo";
+
       const url =
-        sourceId === "demo"
+        activeId === "demo"
           ? "/api/proof?source=demo"
-          : `/api/proof?source=live&index=${sourceId.replace("live-", "")}`;
+          : activeId.startsWith("permit-")
+            ? `/api/proof?source=${activeId}`
+            : `/api/proof?source=live&index=${activeId.replace("live-", "")}`;
+
       const proofRes = await fetch(url);
       if (proofRes.ok) {
         const proofData: ProofPayload = await proofRes.json();
@@ -106,8 +129,13 @@ export default function ProofExplorerPage() {
   };
 
   useEffect(() => {
-    fetchSourcesAndProof(selectedSourceId);
-  }, [selectedSourceId]);
+    fetchSourcesAndProof();
+  }, []);
+
+  const handleSelectSource = (id: string) => {
+    setSelectedSourceId(id);
+    fetchSourcesAndProof(id);
+  };
 
   const activeReport = proof?.report;
   const activeManifest = proof?.manifest;
@@ -137,24 +165,46 @@ export default function ProofExplorerPage() {
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
   };
 
   const itemVariants: Variants = {
     hidden: { y: 15, opacity: 0 },
-    visible: { y: 0, opacity: 1, transition: { duration: 0.4 } }
+    visible: { y: 0, opacity: 1, transition: { duration: 0.35 } },
   };
 
-  if (loading || !activeReport || !activeManifest) {
+  if (loading && !proof) {
     return (
       <div className="flex-1 w-full bg-[#F0EFE3] min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-[#74736A] font-mono text-xs uppercase tracking-widest">
           <RefreshCw className="w-6 h-6 animate-spin text-[#0B4FFF]" />
-          Loading proof manifest...
+          Loading cryptographic proof manifest...
         </div>
       </div>
     );
   }
+
+  if (!activeReport || !activeManifest) {
+    return (
+      <div className="flex-1 w-full bg-[#F0EFE3] min-h-screen flex items-center justify-center p-6">
+        <div className="max-w-md bg-white border border-black/15 p-6 text-center">
+          <Info className="w-8 h-8 text-[#74736A] mx-auto mb-3" />
+          <h3 className="font-mono font-bold text-[#232323] text-sm uppercase">No Manifest Loaded</h3>
+          <p className="text-xs text-[#74736A] font-mono mt-2 leading-relaxed">
+            Run a tick in Execution or sign a permit in Permit Console to generate cryptographic proofs.
+          </p>
+          <button
+            onClick={() => handleSelectSource("demo")}
+            className="mt-4 px-4 py-2 bg-[#0B4FFF] text-white text-xs font-mono font-bold uppercase"
+          >
+            Load Demo Manifest
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const manifestTime = formatDateTime(activeManifest.createdAt);
 
   return (
     <div className="flex-1 w-full bg-[#F0EFE3] min-h-screen">
@@ -165,36 +215,52 @@ export default function ProofExplorerPage() {
         className="max-w-[1400px] mx-auto px-6 py-12 md:py-16 flex flex-col gap-8"
       >
         {/* Header */}
-        <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-black/15">
+        <motion.div
+          variants={itemVariants}
+          className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-black/15"
+        >
           <div>
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-mono font-bold uppercase tracking-wider bg-white border border-black/15 text-[#232323]">
                 PROOF EXPLORER · LANE B
               </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-mono font-bold uppercase tracking-wider bg-[#EAEEDD] border border-black/15 text-emerald-900">
-                {activeReport.ok ? "REPLAY VERIFIED" : "VERIFICATION ERROR"}
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-mono font-bold uppercase tracking-wider border ${
+                  activeReport.ok
+                    ? "bg-[#EAEEDD] border-black/15 text-emerald-900"
+                    : "bg-rose-50 border-rose-800/30 text-rose-900"
+                }`}
+              >
+                {activeReport.ok ? "CRYPTOGRAPHICALLY VERIFIED" : "VERIFICATION ERROR"}
               </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-mono font-bold uppercase tracking-wider bg-white border border-black/15 text-[#232323]">
-                AIR-GAPPED
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-mono font-bold uppercase tracking-wider border ${
+                  proof.source.kind === "LIVE"
+                    ? "bg-emerald-50 border-emerald-800/30 text-emerald-900"
+                    : "bg-white border-black/15 text-[#232323]"
+                }`}
+              >
+                {proof.source.kind === "LIVE" ? "REAL LIVE ACTIVITY" : "AIR-GAPPED DEMO"}
               </span>
             </div>
 
             <h1 className="text-3xl md:text-5xl font-medium text-[#232323] tracking-tight">
-              Every decision, provably replayable
+              Every decision, provably replayable.
             </h1>
             <p className="text-base text-[#74736A] mt-2 max-w-3xl">
-              Zero broker credentials and zero network required. Anyone can clone this repo and reproduce every approval, shrink, and veto verdict from the committed hash-chained run manifest.
+              Inspect cryptographic Ed25519 signatures, canonical SHA-256 hashes, and real audit trails.
+              Click any hash to copy and view exact timestamp details.
             </p>
           </div>
 
           {/* Source Switcher */}
           {sources.length > 0 && (
-            <div className="flex items-center gap-2 bg-white p-1.5 border border-black/15">
-              <span className="text-xs font-mono font-bold text-[#74736A] ml-2">MANIFEST:</span>
+            <div className="flex items-center gap-2 bg-white p-2 border border-black/15 shrink-0">
+              <span className="text-xs font-mono font-bold text-[#74736A] ml-2">DATA SOURCE:</span>
               <select
                 value={selectedSourceId}
-                onChange={(e) => setSelectedSourceId(e.target.value)}
-                className="bg-[#FAF9F5] border border-black/15 px-3 py-1.5 text-xs font-mono font-bold text-[#232323] focus:outline-none rounded-none"
+                onChange={(e) => handleSelectSource(e.target.value)}
+                className="bg-[#FAF9F5] border border-black/15 px-3 py-1.5 text-xs font-mono font-bold text-[#232323] focus:outline-none rounded-none cursor-pointer"
               >
                 {sources.map((src) => (
                   <option key={src.id} value={src.id}>
@@ -206,50 +272,108 @@ export default function ProofExplorerPage() {
           )}
         </motion.div>
 
-        {/* Telemetry Stats Bar (Sharp flat cards) */}
+        {/* Telemetry Stats Bar */}
         <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <div className="bg-[#EAEEDD] border border-black/15 p-4">
-            <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">01 · RUN ID</span>
-            <div className="text-xs font-bold font-mono text-[#232323] mt-1 truncate">{activeManifest.runId}</div>
-            <span className="text-[10px] text-[#74736A] font-mono mt-1 block">Rev: {activeManifest.codeRevision}</span>
+            <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">
+              01 · RUN / PERMIT
+            </span>
+            <div className="mt-1 truncate">
+              <ClickableHash
+                hash={activeManifest.runId}
+                label="Run Manifest Identifier"
+                timestamp={activeManifest.createdAt}
+                type="Manifest ID"
+                size={8}
+                onInspect={setInspectData}
+              />
+            </div>
+            <span className="text-[10px] text-[#74736A] font-mono mt-1 block truncate">
+              {manifestTime.full}
+            </span>
           </div>
 
           <div className="bg-white border border-black/15 p-4">
-            <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">02 · JOURNAL</span>
-            <div className="text-xl font-bold font-mono text-[#0B4FFF] mt-1">{activeManifest.events.length}</div>
+            <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">
+              02 · JOURNAL
+            </span>
+            <div className="text-xl font-bold font-mono text-[#0B4FFF] mt-1">
+              {activeManifest.events.length}
+            </div>
             <span className="text-[10px] text-[#74736A] font-mono mt-1 block">Hash-chained events</span>
           </div>
 
           <div className="bg-white border border-black/15 p-4">
-            <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">03 · PASSING</span>
+            <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">
+              03 · VERIFICATION
+            </span>
             <div className="text-xl font-bold font-mono text-emerald-800 mt-1">
               {activeReport.counts.passed}/{activeReport.checks.length}
             </div>
-            <span className="text-[10px] text-[#74736A] font-mono mt-1 block">0 failures</span>
+            <span className="text-[10px] text-[#74736A] font-mono mt-1 block">
+              {activeReport.counts.failed === 0 ? "0 failures" : `${activeReport.counts.failed} failed`}
+            </span>
           </div>
 
           <div className="bg-white border border-black/15 p-4">
-            <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">04 · REPRODUCED</span>
-            <div className="text-xl font-bold font-mono text-[#0B4FFF] mt-1">{activeReport.counts.reproduced}</div>
-            <span className="text-[10px] text-[#74736A] font-mono mt-1 block">Re-evaluated rules</span>
+            <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">
+              04 · REPRODUCED
+            </span>
+            <div className="text-xl font-bold font-mono text-[#0B4FFF] mt-1">
+              {activeReport.counts.reproduced}
+            </div>
+            <span className="text-[10px] text-[#74736A] font-mono mt-1 block">Re-evaluated proofs</span>
           </div>
 
           <div className="bg-white border border-black/15 p-4">
-            <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">05 · RECORDED</span>
-            <div className="text-xl font-bold font-mono text-[#232323] mt-1">{activeReport.counts.recorded}</div>
+            <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">
+              05 · RECORDED
+            </span>
+            <div className="text-xl font-bold font-mono text-[#232323] mt-1">
+              {activeReport.counts.recorded}
+            </div>
             <span className="text-[10px] text-[#74736A] font-mono mt-1 block">Captured snapshots</span>
           </div>
 
           <div className="bg-white border border-black/15 p-4">
-            <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">06 · SIGNING KEY</span>
-            <div className="text-xs font-bold font-mono text-[#232323] mt-1 truncate">
-              {activeManifest.signingKeyId || "1fc2cf5735e3bd4b"}
+            <span className="text-[10px] font-mono font-bold text-[#74736A] uppercase tracking-wider block">
+              06 · SIGNING KEY
+            </span>
+            <div className="mt-1 truncate">
+              <ClickableHash
+                hash={activeManifest.signingKeyId || "4955b19676805b1c"}
+                label="Ed25519 Signing Key ID"
+                timestamp={activeManifest.createdAt}
+                type="Ed25519 Key ID"
+                size={6}
+                onInspect={setInspectData}
+              />
             </div>
-            <span className="text-[10px] text-emerald-800 font-mono font-bold mt-1 block">Ed25519 Public</span>
+            <span className="text-[10px] text-emerald-800 font-mono font-bold mt-1 block">
+              Ed25519 Verified
+            </span>
           </div>
         </motion.div>
 
-        {/* Audit Honesty Card (Image 4 & 5 Style) */}
+        {/* Source Notes */}
+        {proof.notes && proof.notes.length > 0 && (
+          <motion.div
+            variants={itemVariants}
+            className="p-4 bg-white border border-black/15 flex flex-col gap-1.5 text-xs font-mono"
+          >
+            <span className="text-[10px] font-bold text-[#74736A] uppercase tracking-wider">
+              MANIFEST PROVENANCE & CAVEATS
+            </span>
+            {proof.notes.map((note, idx) => (
+              <div key={idx} className="text-[#5F5E56] flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0B4FFF]" />
+                {note}
+              </div>
+            ))}
+          </motion.div>
+        )}
+
+        {/* Audit Honesty Card */}
         <motion.div variants={itemVariants} className="bg-white border border-black/15 flex flex-col">
           <div className="p-5 md:p-6 bg-[#EAEEDD] border-b border-black/15 flex items-center justify-between">
             <div className="text-[11px] font-mono font-bold text-[#74736A] uppercase tracking-widest">
@@ -265,7 +389,9 @@ export default function ProofExplorerPage() {
                 </span>
               </div>
               <p className="text-[#232323] leading-relaxed font-sans text-xs">
-                Deterministic mathematical proofs executed in this runtime now. All 8 safety invariants (COV-01..08), policy hashes, intent hashes, permit signatures, and exact order bindings are re-evaluated from raw inputs and proven identical.
+                Deterministic mathematical proofs executed in this runtime now. All safety invariants,
+                policy hashes, intent hashes, permit signatures, and exact order bindings are re-evaluated
+                from raw inputs and proven identical.
               </p>
             </div>
 
@@ -276,9 +402,101 @@ export default function ProofExplorerPage() {
                 </span>
               </div>
               <p className="text-[#232323] leading-relaxed font-sans text-xs">
-                Market and account snapshots captured at tick execution. We cryptographically prove their canonical SHA-256 hashes have not been altered or backfilled since generation.
+                Market and account snapshots captured at execution time. We cryptographically prove their
+                canonical SHA-256 hashes have not been altered or backfilled since generation.
               </p>
             </div>
+          </div>
+        </motion.div>
+
+        {/* Append-Only Hash Chain Journal */}
+        <motion.div variants={itemVariants} className="bg-white border border-black/15 flex flex-col">
+          <div className="p-5 md:p-6 bg-[#EAEEDD] border-b border-black/15 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="text-[11px] font-mono font-bold text-[#74736A] uppercase tracking-widest">
+                APPEND-ONLY HASH CHAIN JOURNAL
+              </div>
+              <p className="text-xs text-[#74736A] font-mono mt-0.5">
+                Click any hash to copy and inspect its full cryptographic payload and timestamp.
+              </p>
+            </div>
+            <span className="text-xs font-mono text-[#74736A] bg-white px-3 py-1 border border-black/15">
+              {activeManifest.events.length} Hash-Chained Events
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse font-mono">
+              <thead>
+                <tr className="bg-[#FAF9F5] text-[#74736A] uppercase text-[10px] font-bold border-b border-black/10">
+                  <th className="py-3 px-4 w-40">Date & Time</th>
+                  <th className="py-3 px-4 w-28">Event ID</th>
+                  <th className="py-3 px-4 w-48">Event Type</th>
+                  <th className="py-3 px-4 w-40">SHA-256 Hash</th>
+                  <th className="py-3 px-4 w-40">Parent Hash</th>
+                  <th className="py-3 px-4">Payload Summary</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-black/10">
+                {activeManifest.events.map((evt) => {
+                  const tone = EVENT_TONES[evt.eventType] ?? {
+                    bg: "bg-white",
+                    text: "text-[#232323]",
+                    border: "border-black/15",
+                  };
+                  const eventTime = formatDateTime(evt.timestamp);
+
+                  return (
+                    <tr key={evt.eventId} className="hover:bg-[#FAF9F5] transition-colors">
+                      <td className="py-3 px-4 font-mono text-xs text-[#232323]">
+                        <div className="font-semibold">{eventTime.time}</div>
+                        <div className="text-[10px] text-[#74736A]">{eventTime.date}</div>
+                      </td>
+                      <td className="py-3 px-4 font-bold text-[#232323]">{evt.eventId}</td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${tone.bg} ${tone.text} ${tone.border}`}
+                        >
+                          {evt.eventType.replace(/_/g, " ")}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <ClickableHash
+                          hash={evt.eventHash}
+                          label={`${evt.eventId} · ${evt.eventType}`}
+                          timestamp={evt.timestamp}
+                          type="Event Hash (SHA-256)"
+                          metadata={{
+                            actor: evt.actor,
+                            codeRevision: evt.codeRevision,
+                          }}
+                          payload={evt.payload}
+                          onInspect={setInspectData}
+                        />
+                      </td>
+                      <td className="py-3 px-4">
+                        {evt.previousEventHash ? (
+                          <ClickableHash
+                            hash={evt.previousEventHash}
+                            label={`${evt.eventId} Previous Hash`}
+                            timestamp={evt.timestamp}
+                            type="Parent Link Hash"
+                            onInspect={setInspectData}
+                          />
+                        ) : (
+                          <span className="text-[#74736A] font-mono text-xs">GENESIS</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-[#232323] font-sans text-xs">
+                        {decisionSummary(evt.payload) ?? (
+                          <span className="text-[#74736A] font-mono">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </motion.div>
 
@@ -289,7 +507,9 @@ export default function ProofExplorerPage() {
               <div className="text-[11px] font-mono font-bold text-[#74736A] uppercase tracking-widest">
                 CRYPTOGRAPHIC VERIFICATION MATRIX
               </div>
-              <p className="text-xs text-[#74736A] font-mono mt-0.5">Re-evaluated against deterministic safety rules and permit bounds.</p>
+              <p className="text-xs text-[#74736A] font-mono mt-0.5">
+                Re-evaluated against deterministic safety rules and permit bounds.
+              </p>
             </div>
 
             {/* Filter Pills & Search */}
@@ -310,7 +530,7 @@ export default function ProofExplorerPage() {
                   <button
                     key={tab}
                     onClick={() => setCheckFilter(tab)}
-                    className={`px-2.5 py-1 text-[10px] font-bold uppercase transition-all ${
+                    className={`px-2.5 py-1 text-[10px] font-bold uppercase transition-all cursor-pointer ${
                       checkFilter === tab
                         ? "bg-[#232323] text-white"
                         : "text-[#74736A] hover:text-[#232323]"
@@ -335,7 +555,10 @@ export default function ProofExplorerPage() {
               </thead>
               <tbody className="divide-y divide-black/10">
                 {filteredChecks.map((check, index) => (
-                  <tr key={`${check.id}-${check.eventId ?? "global"}-${index}`} className="hover:bg-[#FAF9F5] transition-colors">
+                  <tr
+                    key={`${check.id}-${check.eventId ?? "global"}-${index}`}
+                    className="hover:bg-[#FAF9F5] transition-colors"
+                  >
                     <td className="py-2.5 px-4">
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider border ${
@@ -359,10 +582,14 @@ export default function ProofExplorerPage() {
                         {check.label}
                       </span>
                     </td>
-                    <td className="py-2.5 px-4 font-mono text-[#74736A] font-bold text-xs">{check.eventId ?? "—"}</td>
+                    <td className="py-2.5 px-4 font-mono text-[#74736A] font-bold text-xs">
+                      {check.eventId ?? "—"}
+                    </td>
                     <td className="py-2.5 px-4">
                       <div className="font-bold text-[#232323] font-mono text-xs">{check.id}</div>
-                      <div className="text-[#74736A] text-xs mt-0.5 leading-relaxed font-sans">{check.detail}</div>
+                      <div className="text-[#74736A] text-xs mt-0.5 leading-relaxed font-sans">
+                        {check.detail}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -381,87 +608,51 @@ export default function ProofExplorerPage() {
           </div>
         </motion.div>
 
-        {/* Hash Chain Timeline Card Component */}
-        <motion.div variants={itemVariants} className="bg-white border border-black/15 flex flex-col">
-          <div className="p-5 md:p-6 bg-[#EAEEDD] border-b border-black/15">
-            <div className="text-[11px] font-mono font-bold text-[#74736A] uppercase tracking-widest">
-              APPEND-ONLY HASH CHAIN JOURNAL
-            </div>
-            <p className="text-xs text-[#74736A] font-mono mt-0.5">
-              Every event commits to the previous SHA-256 hash. Mutating or deleting a veto invalidates all subsequent blocks.
-            </p>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse font-mono">
-              <thead>
-                <tr className="bg-[#FAF9F5] text-[#74736A] uppercase text-[10px] font-bold border-b border-black/10">
-                  <th className="py-2.5 px-4 w-28">Event</th>
-                  <th className="py-2.5 px-4 w-48">Event Type</th>
-                  <th className="py-2.5 px-4 w-36">SHA-256 Hash</th>
-                  <th className="py-2.5 px-4 w-36">Links To</th>
-                  <th className="py-2.5 px-4">Payload Summary</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-black/10">
-                {activeManifest.events.map((evt) => {
-                  const tone = EVENT_TONES[evt.eventType] ?? {
-                    bg: "bg-white",
-                    text: "text-[#232323]",
-                    border: "border-black/15"
-                  };
-                  return (
-                    <tr key={evt.eventId} className="hover:bg-[#FAF9F5] transition-colors">
-                      <td className="py-2.5 px-4 font-bold text-[#232323]">{evt.eventId}</td>
-                      <td className="py-2.5 px-4">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${tone.bg} ${tone.text} ${tone.border}`}
-                        >
-                          {evt.eventType.replace(/_/g, " ")}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-4 text-[#0B4FFF] font-semibold">{shortHash(evt.eventHash)}</td>
-                      <td className="py-2.5 px-4 text-[#74736A]">{shortHash(evt.previousEventHash)}</td>
-                      <td className="py-2.5 px-4 text-[#232323] font-sans text-xs">
-                        {decisionSummary(evt.payload) ?? <span className="text-[#74736A] font-mono">—</span>}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </motion.div>
-
         {/* Reproduce Locally CLI Box */}
-        <motion.div variants={itemVariants} className="bg-[#1A1A1A] text-white border border-black/20 p-6 md:p-8">
+        <motion.div
+          variants={itemVariants}
+          className="bg-[#1A1A1A] text-white border border-black/20 p-6 md:p-8"
+        >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-2.5">
               <Terminal className="w-5 h-5 text-[#0B4FFF]" />
-              <h3 className="text-base font-mono font-bold uppercase text-white">Reproduce Offline from Fresh Clone</h3>
+              <h3 className="text-base font-mono font-bold uppercase text-white">
+                Reproduce Offline from Fresh Clone
+              </h3>
             </div>
 
             <button
               onClick={copyTerminalCmd}
               className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-xs font-mono text-white border border-white/15 transition-colors cursor-pointer"
             >
-              {copiedTerminal ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedTerminal ? (
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+              ) : (
+                <Copy className="w-3.5 h-3.5" />
+              )}
               {copiedTerminal ? "COPIED" : "COPY CLI"}
             </button>
           </div>
 
           <p className="text-xs text-[#A0A09B] font-mono mb-4">
-            Runs 24 deterministic verification checks and 27 architectural boundary audit rules in under 2 seconds.
+            Runs deterministic verification checks and architectural boundary audit rules in under 2 seconds.
           </p>
 
           <div className="bg-black/60 p-4 font-mono text-xs text-emerald-400 leading-relaxed border border-white/10 overflow-x-auto">
-            <div className="text-[#A0A09B] select-none"># Verify all deterministic checks on committed run manifest:</div>
+            <div className="text-[#A0A09B] select-none">
+              # Verify all deterministic checks on committed run manifest:
+            </div>
             <div>npm run verify -- demo/run_manifest.json</div>
-            <div className="text-[#A0A09B] select-none mt-2"># Audit capability boundary isolation & invariant coverage:</div>
+            <div className="text-[#A0A09B] select-none mt-2">
+              # Audit capability boundary isolation & invariant coverage:
+            </div>
             <div>npm run audit</div>
           </div>
         </motion.div>
       </motion.div>
+
+      {/* Cryptographic Inspector Modal */}
+      <HashInspectorModal data={inspectData} onClose={() => setInspectData(null)} />
     </div>
   );
 }

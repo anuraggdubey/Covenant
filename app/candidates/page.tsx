@@ -86,11 +86,11 @@ export default function CandidateLabPage() {
   const [structureFilter, setStructureFilter] = useState<string>("ALL");
   const [maxLossCap, setMaxLossCap] = useState<string>("");
 
-  const fetchCandidates = async () => {
+  const fetchCandidates = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/candidates");
+      const res = await fetch(force ? "/api/candidates?force=true" : "/api/candidates");
       const json = (await res.json()) as CandidateResponse & { error?: string };
       if (!res.ok) throw new Error(json.error ?? "Candidate data is unavailable.");
       setData(json);
@@ -215,9 +215,9 @@ export default function CandidateLabPage() {
             </div>
 
             <button
-              onClick={fetchCandidates}
+              onClick={() => void fetchCandidates(true)}
               disabled={loading}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-[#FAF9F5] text-[#232323] text-xs font-mono font-bold uppercase border border-black/15 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-[#FAF9F5] text-[#232323] text-xs font-mono font-bold uppercase border border-black/15 transition-colors cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-[#74736A] ${loading ? "animate-spin" : ""}`} />
               {loading ? "Refreshing..." : "Refresh Chains"}

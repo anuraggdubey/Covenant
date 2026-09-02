@@ -10,6 +10,7 @@ const PRIMARY_ROUTES = [
   { label: "Mandates", path: "/mandates" },
   { label: "Break Me", path: "/break-me" },
   { label: "Permits", path: "/permits" },
+  { label: "Execution", path: "/execution" },
   { label: "Proof", path: "/proof" },
   { label: "Shadow Ledger", path: "/shadow-ledger" },
 ];

@@ -55,7 +55,16 @@ export const alpacaAssetSchema = z.object({
   easy_to_borrow: z.boolean(),
   fractionable: z.boolean(),
   has_options: z.boolean().optional(),
-}).passthrough();
+  attributes: z.array(z.string()).optional(),
+}).passthrough().transform((asset) => {
+  const hasOptions =
+    asset.has_options ??
+    (asset.attributes ? asset.attributes.includes("has_options") : undefined);
+  return {
+    ...asset,
+    has_options: hasOptions,
+  };
+});
 
 export type AlpacaAssetResponse = z.infer<typeof alpacaAssetSchema>;
 
@@ -65,6 +74,7 @@ export const alpacaQuoteSchema = z.object({
   bp: finiteNumber,
   bs: z.number().int().nonnegative(),
   t: z.string().datetime({ offset: true }),
+  c: z.union([z.string(), z.array(z.string())]).nullable().optional(),
 }).passthrough();
 
 export type AlpacaOptionQuote = z.infer<typeof alpacaQuoteSchema>;
@@ -73,16 +83,16 @@ export const alpacaTradeSchema = z.object({
   p: finiteNumber,
   s: z.number().int().nonnegative(),
   t: z.string().datetime({ offset: true }),
-  c: z.array(z.string()).optional(),
+  c: z.union([z.string(), z.array(z.string())]).nullable().optional(),
 }).passthrough();
 
 export type AlpacaOptionTrade = z.infer<typeof alpacaTradeSchema>;
 
 export const alpacaGreeksSchema = z.object({
-  delta: finiteNumber,
-  gamma: finiteNumber,
-  theta: finiteNumber,
-  vega: finiteNumber,
+  delta: finiteNumber.nullable().optional(),
+  gamma: finiteNumber.nullable().optional(),
+  theta: finiteNumber.nullable().optional(),
+  vega: finiteNumber.nullable().optional(),
 }).passthrough();
 
 export type AlpacaOptionGreeks = z.infer<typeof alpacaGreeksSchema>;
@@ -95,19 +105,19 @@ export const alpacaBarSchema = z.object({
   c: finiteNumber,
   v: z.number().nonnegative(),
   n: z.number().int().nonnegative(),
-  vw: finiteNumber,
+  vw: finiteNumber.nullable().optional(),
 }).passthrough();
 
 export type AlpacaBar = z.infer<typeof alpacaBarSchema>;
 
 export const alpacaOptionSnapshotItemSchema = z.object({
-  latestQuote: alpacaQuoteSchema.optional(),
-  latestTrade: alpacaTradeSchema.optional(),
-  dailyBar: alpacaBarSchema.optional(),
-  greeks: alpacaGreeksSchema.optional(),
-  impliedVolatility: finiteNumber.optional(),
-  open_interest: z.number().int().nonnegative().optional(),
-  openInterest: z.number().int().nonnegative().optional(),
+  latestQuote: alpacaQuoteSchema.nullable().optional(),
+  latestTrade: alpacaTradeSchema.nullable().optional(),
+  dailyBar: alpacaBarSchema.nullable().optional(),
+  greeks: alpacaGreeksSchema.nullable().optional(),
+  impliedVolatility: finiteNumber.nullable().optional(),
+  open_interest: z.number().int().nonnegative().nullable().optional(),
+  openInterest: z.number().int().nonnegative().nullable().optional(),
 }).passthrough();
 
 export type AlpacaOptionSnapshotItem = z.infer<typeof alpacaOptionSnapshotItemSchema>;
@@ -120,11 +130,11 @@ export const alpacaOptionSnapshotsSchema = z.object({
 export type AlpacaOptionSnapshotsResponse = z.infer<typeof alpacaOptionSnapshotsSchema>;
 
 export const alpacaStockSnapshotSchema = z.object({
-  latestTrade: alpacaTradeSchema.optional(),
-  latestQuote: alpacaQuoteSchema.optional(),
-  minuteBar: alpacaBarSchema.optional(),
-  dailyBar: alpacaBarSchema.optional(),
-  prevDailyBar: alpacaBarSchema.optional(),
+  latestTrade: alpacaTradeSchema.nullable().optional(),
+  latestQuote: alpacaQuoteSchema.nullable().optional(),
+  minuteBar: alpacaBarSchema.nullable().optional(),
+  dailyBar: alpacaBarSchema.nullable().optional(),
+  prevDailyBar: alpacaBarSchema.nullable().optional(),
 }).passthrough();
 
 export type AlpacaStockSnapshotResponse = z.infer<typeof alpacaStockSnapshotSchema>;

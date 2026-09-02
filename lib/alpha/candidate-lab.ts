@@ -22,6 +22,7 @@ import type {
   UnderlyingLabView
 } from "@/lib/alpha/candidate-lab-types";
 import {
+  getFreshCandidateLab,
   lastCandidateLab,
   rememberCandidateLab,
   staleFromCache
@@ -31,10 +32,13 @@ import {
 export const STALE_LAB_QUOTE_AGE_MS = 48 * 60 * 60 * 1000;
 const MAX_SPREAD_CARDS = 50;
 
-export function candidateLabPolicy(isOpen: boolean): Policy {
+export function candidateLabPolicy(isOpen: boolean, feed?: string): Policy {
   const base = getOperatorActivePolicy() ?? defaultActivePolicy;
-  if (isOpen) return base;
-  return { ...base, maxQuoteAgeMs: STALE_LAB_QUOTE_AGE_MS };
+  const policy = isOpen ? base : { ...base, maxQuoteAgeMs: STALE_LAB_QUOTE_AGE_MS };
+  if (feed === "indicative") {
+    return { ...policy, minOpenInterest: 0 };
+  }
+  return policy;
 }
 
 function toContractView(contract: OptionContractSnapshot | undefined): LadderRowView["call"] {
@@ -103,9 +107,12 @@ async function buildUnderlyingLab(
   accountSnapshot: AccountSnapshot,
   clock: AlpacaClockResponse
 ): Promise<UnderlyingLabView> {
-  const stockSnap = await readClient.getStockSnapshot(sym);
-  const rawOptions = await readClient.getOptionSnapshots(sym);
-  const asset = await readClient.getAsset(sym);
+  const [stockSnap, rawOptions, asset, barsResp] = await Promise.all([
+    readClient.getStockSnapshot(sym),
+    readClient.getOptionSnapshots(sym),
+    readClient.getAsset(sym),
+    readClient.getStockBars(sym, "1Day", 60),
+  ]);
   if (!asset.tradable) {
     throw new Error(`${sym} is not tradable.`);
   }
@@ -114,7 +121,6 @@ async function buildUnderlyingLab(
   if (asset.has_options === false) {
     throw new Error(`${sym} is not enabled for options.`);
   }
-  const barsResp = await readClient.getStockBars(sym, "1Day", 60);
   const bars = barsResp.bars[sym] ?? [];
 
   const price =
@@ -122,12 +128,13 @@ async function buildUnderlyingLab(
     stockSnap.latestQuote?.ap?.toFixed(2);
   if (!price) throw new Error(`Missing underlying price for ${sym}.`);
 
-  const labPolicy = candidateLabPolicy(clock.is_open);
+  const feed = readClient.isMockMode() ? "synthetic" : readClient.getOptionFeed();
+  const labPolicy = candidateLabPolicy(clock.is_open, feed);
   const marketSnapshot = buildMarketSnapshot(
     sym,
     price,
     rawOptions,
-    readClient.isMockMode() ? "synthetic" : readClient.getOptionFeed(),
+    feed,
     clock.timestamp
   );
   const candidates = generateCandidates(marketSnapshot, labPolicy, 1);
@@ -201,10 +208,10 @@ export async function fetchCandidateLabFromBroker(
   const rawAccount = await readClient.getAccount();
   const accountSnapshot = buildAccountSnapshot(rawAccount);
 
-  const results: UnderlyingLabView[] = [];
-  for (const sym of ["SPY", "QQQ"] as const) {
-    results.push(await buildUnderlyingLab(readClient, sym, accountSnapshot, clock));
-  }
+  const symbols = ["SPY", "QQQ"] as const;
+  const results = await Promise.all(
+    symbols.map((sym) => buildUnderlyingLab(readClient, sym, accountSnapshot, clock))
+  );
 
   const freshness = clock.is_open ? "LIVE" : "STALE";
   const warning = clock.is_open
@@ -236,9 +243,16 @@ export async function fetchCandidateLabFromBroker(
 }
 
 export async function loadCandidateLab(
-  readClient?: AlpacaReadClient
+  readClient?: AlpacaReadClient,
+  options?: { force?: boolean }
 ): Promise<CandidateLabResponse> {
   const client = readClient ?? new AlpacaReadClient();
+  if (!options?.force && !client.isMockMode()) {
+    const fresh = getFreshCandidateLab();
+    if (fresh !== null) {
+      return fresh;
+    }
+  }
   try {
     const payload = await fetchCandidateLabFromBroker(client);
     rememberCandidateLab(payload);

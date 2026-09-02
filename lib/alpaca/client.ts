@@ -111,7 +111,11 @@ export class AlpacaReadClient {
       const raw = await response.json();
       const parsed = schema.safeParse(raw);
       if (!parsed.success) {
-        throw new Error(`Alpaca ${description} returned an invalid response payload.`);
+        const issueSummary = parsed.error.issues
+          .slice(0, 3)
+          .map((i) => `${i.path.join(".") || "root"}: ${i.message}`)
+          .join("; ");
+        throw new Error(`Alpaca ${description} returned an invalid response payload: ${issueSummary}`);
       }
       return parsed.data;
     } catch (error: unknown) {
@@ -265,7 +269,16 @@ export class AlpacaReadClient {
     url.searchParams.set("timeframe", timeframe);
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("feed", this.stockFeed);
-    return this.fetchJson(url, `getStockBars(${symbol})`, alpacaBarsSchema);
+    url.searchParams.set("sort", "desc");
+    const lookbackDays = timeframe === "1Day" ? Math.max(120, Math.ceil(limit * 2.5)) : 30;
+    const computedStart = new Date(Date.now() - lookbackDays * 86_400_000).toISOString().slice(0, 10);
+    url.searchParams.set("start", computedStart);
+    const response = await this.fetchJson(url, `getStockBars(${symbol})`, alpacaBarsSchema);
+    const symbolBars = response.bars[symbol];
+    if (Array.isArray(symbolBars)) {
+      symbolBars.reverse();
+    }
+    return response;
   }
 
   async getPositions(): Promise<import("@/lib/monitor/position-monitor").AlpacaPositionResponse[]> {

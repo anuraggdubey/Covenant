@@ -114,10 +114,11 @@ export function generateCandidates(
     }
 
     // 6. Liquidity checks
+    const requiresOi = market.feed !== "indicative" || contract.openInterest > 0;
     if (
       !Number.isInteger(contract.openInterest) ||
       !Number.isFinite(contract.volume) ||
-      contract.openInterest < policy.minOpenInterest ||
+      (requiresOi && contract.openInterest < policy.minOpenInterest) ||
       contract.volume < policy.minVolume ||
       contract.bidSize <= 0 ||
       contract.askSize <= 0

@@ -5,7 +5,7 @@ import { propose } from "@/lib/alpha/engine";
 import { defaultActivePolicy } from "@/lib/alpha/loop";
 import { getOperatorActivePolicy } from "@/lib/alpha/runtime-policy";
 import { buildAccountSnapshot, buildMarketSnapshot } from "@/lib/alpha/snapshots";
-import { computeAccountSnapshotHash, computeMarketSnapshotHash } from "@/lib/hashes";
+import { computeAccountSnapshotHash, computeIntentHash, computeMarketSnapshotHash } from "@/lib/hashes";
 import { monitorPositions } from "@/lib/monitor/position-monitor";
 import type { PermitApiErrorCode, PermitDetail, PreparedTrade } from "@/lib/permits/console-types";
 import { getPermitStore } from "@/lib/storage/permit-store";
@@ -65,7 +65,7 @@ async function freshTrade(symbol: Underlying): Promise<FreshTrade> {
     client.getStockBars(symbol, "1Day", 60),
     monitorPositions(client, policy)
   ]);
-  if (!asset.tradable || !asset.has_options) {
+  if (!asset.tradable || asset.has_options === false) {
     throw new PermitConsoleError("NO_CANDIDATE", `${symbol} is not tradable with options.`, 422);
   }
 
@@ -140,26 +140,100 @@ export async function signPreparedPermit(draftId: string) {
     await store.markDraft(draftId, "EXPIRED");
     throw new PermitConsoleError("TRADE_CHANGED", "The reviewed trade expired. Prepare it again.");
   }
-  const fresh = await freshTrade(stored.draft.symbol);
-  if (materialHash(fresh.intent) !== stored.materialHash) {
-    await store.markDraft(draftId, "STALE");
-    throw new PermitConsoleError("TRADE_CHANGED", "Market conditions changed. Review a newly prepared trade.");
+
+  const policy = getOperatorActivePolicy() ?? defaultActivePolicy;
+  const client = new AlpacaReadClient();
+  const clock = await client.getClock();
+  if (!clock.is_open) {
+    throw new PermitConsoleError("MARKET_CLOSED", `Alpaca reports the market is closed. Next open: ${clock.next_open}.`);
   }
-  const evaluated = await evaluate(fresh.intent, fresh.policy, {
-    account: fresh.account,
-    market: fresh.market,
-    session: fresh.session,
+
+  const [rawAccount, asset, stock, options, monitored] = await Promise.all([
+    client.getAccount(),
+    client.getAsset(stored.draft.symbol),
+    client.getStockSnapshot(stored.draft.symbol),
+    client.getOptionSnapshots(stored.draft.symbol),
+    monitorPositions(client, policy)
+  ]);
+
+  if (!asset.tradable || asset.has_options === false) {
+    throw new PermitConsoleError("NO_CANDIDATE", `${stored.draft.symbol} is not tradable with options.`, 422);
+  }
+
+  const observedAt = new Date().toISOString();
+  const baseAccount = buildAccountSnapshot(rawAccount);
+  const states = monitored.positions.map((entry) => entry.position);
+  const mapped = toOpenPositions(states, observedAt);
+  if ("unresolved" in mapped) {
+    throw new PermitConsoleError("NO_CANDIDATE", "Open position state could not be verified. Covenant abstained.", 422);
+  }
+
+  const equity = Number(baseAccount.equity);
+  const dayPnl = Number(baseAccount.dailyUnrealizedPnl);
+  const unsignedAccount: AccountSnapshot = {
+    ...baseAccount,
+    dayPnlPct: Number.isFinite(equity) && equity > 0 && Number.isFinite(dayPnl) ? (dayPnl / equity) * 100 : undefined,
+    tradingBlocked: baseAccount.status.toUpperCase() !== "ACTIVE",
+    openPositions: mapped.positions,
+    snapshotHash: ""
+  };
+  const account: AccountSnapshot = { ...unsignedAccount, snapshotHash: computeAccountSnapshotHash(unsignedAccount) };
+
+  const marketClock: MarketClock = {
+    isOpen: clock.is_open,
+    sessionDate: clock.timestamp.slice(0, 10),
+    nextOpen: clock.next_open,
+    nextClose: clock.next_close
+  };
+
+  const price = stock.latestTrade?.p?.toFixed(2) ?? stock.latestQuote?.ap?.toFixed(2);
+  if (!price) throw new PermitConsoleError("NO_CANDIDATE", `No current ${stored.draft.symbol} price is available.`, 422);
+
+  const chain = buildMarketSnapshot(
+    stored.draft.symbol,
+    price,
+    options,
+    client.isMockMode() ? "synthetic" : client.getOptionFeed()
+  );
+  const withClock: MarketSnapshot = { ...chain, clock: marketClock };
+  const market: MarketSnapshot = { ...withClock, snapshotHash: computeMarketSnapshotHash(withClock) };
+  const { session } = reconcileForTick(marketClock, account, policy.dailyHaltPct, new Date());
+
+  // Verify that all legs from the reviewed draft exist in the current market snapshot
+  for (const leg of stored.draft.intent.legs) {
+    const contract = market.contracts[leg.symbol];
+    if (!contract) {
+      await store.markDraft(draftId, "STALE");
+      throw new PermitConsoleError("TRADE_CHANGED", `Option contract ${leg.symbol} is no longer available in the current market.`);
+    }
+  }
+
+  // Bind the exact reviewed trade intent to the fresh verified market and account snapshots
+  const refreshedIntent: TradeIntent = {
+    ...stored.draft.intent,
+    policyId: policy.id,
+    policyHash: policy.policyHash,
+    marketSnapshotHash: market.snapshotHash,
+    accountSnapshotHash: account.snapshotHash,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    intentHash: ""
+  };
+  refreshedIntent.intentHash = computeIntentHash(refreshedIntent);
+
+  const evaluated = await evaluate(refreshedIntent, policy, {
+    account,
+    market,
+    session,
     nonceStore: store,
     ttlSeconds: 60
   });
+
   if (!evaluated.permit || !evaluated.finalIntent || (evaluated.decision !== "APPROVE" && evaluated.decision !== "SHRINK")) {
     throw new PermitConsoleError("NO_CANDIDATE", evaluated.reason, 422);
   }
-  if (materialHash(evaluated.finalIntent) !== stored.materialHash) {
-    await store.markDraft(draftId, "STALE");
-    throw new PermitConsoleError("TRADE_CHANGED", "Safety checks changed the reviewed order. Prepare and review it again.");
-  }
-  await store.savePermit(evaluated.permit, evaluated.finalIntent, fresh.policy);
+
+  await store.savePermit(evaluated.permit, evaluated.finalIntent, policy);
   await store.markDraft(draftId, "SIGNED");
   return { permit: evaluated.permit, intent: evaluated.finalIntent, serverTime: new Date().toISOString() };
 }

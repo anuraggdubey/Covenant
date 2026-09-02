@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { listProofSources, loadDemoProof, loadLiveProof } from "@/lib/alpha/proof-explorer";
+import {
+  listProofSourcesAsync,
+  loadDemoProof,
+  loadLiveProof,
+  loadPermitProof,
+} from "@/lib/alpha/proof-explorer";
 
 export const dynamic = "force-dynamic";
 
@@ -8,17 +13,28 @@ export const dynamic = "force-dynamic";
  * GET /api/proof
  * GET /api/proof?source=demo
  * GET /api/proof?source=live&index=0
+ * GET /api/proof?source=permit-1234
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const source = searchParams.get("source");
 
   if (source === null || source === "") {
-    return NextResponse.json({ sources: listProofSources() });
+    const sources = await listProofSourcesAsync();
+    return NextResponse.json({ sources });
   }
 
   if (source === "demo") {
     return NextResponse.json(loadDemoProof());
+  }
+
+  if (source.startsWith("permit-")) {
+    const permitId = source.replace("permit-", "");
+    const payload = await loadPermitProof(permitId);
+    if (payload === null) {
+      return NextResponse.json({ error: "Permit proof not found." }, { status: 404 });
+    }
+    return NextResponse.json(payload);
   }
 
   if (source === "live") {
@@ -36,5 +52,5 @@ export async function GET(request: Request) {
     return NextResponse.json(payload);
   }
 
-  return NextResponse.json({ error: "Unknown source. Use demo or live." }, { status: 400 });
+  return NextResponse.json({ error: "Unknown source. Use demo, live, or permit-[id]." }, { status: 400 });
 }

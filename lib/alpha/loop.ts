@@ -246,7 +246,7 @@ export async function executeTick(
   for (const sym of policy.allowedUnderlyings) {
     try {
       const asset = await readClient.getAsset(sym);
-      if (!asset.tradable || !asset.has_options) {
+      if (!asset.tradable || asset.has_options === false) {
         throw new Error(`${sym} is not currently tradable with options.`);
       }
       const stockSnap = await readClient.getStockSnapshot(sym);

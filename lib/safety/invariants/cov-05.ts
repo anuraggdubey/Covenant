@@ -83,7 +83,8 @@ export const covenant05: InvariantEvaluator = {
         );
       }
 
-      if (contract.openInterest < policy.minOpenInterest) {
+      const requiresOi = market.feed !== "indicative" || contract.openInterest > 0;
+      if (requiresOi && contract.openInterest < policy.minOpenInterest) {
         return fail(
           "COV-05",
           "VETO",

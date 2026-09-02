@@ -1,0 +1,56 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Covenant Quality & Cryptographic Invariants
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
+      ALPACA_MOCK_MODE: "true"
+      ALPACA_PAPER: "true"
+      COVENANT_LIVE_SUBMIT: "false"
+      PERMIT_SIGNING_PRIVATE_KEY: "MC4CAQAwBQYDK2VwBCIEIKx6x4a7yR9sI2Ff9UvG7c5W3qQ8hY4jK2lN1mP0oX3b"
+      PERMIT_SIGNING_PUBLIC_KEY: "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUNvd0JRWURLMlZ3QXlFQWJSL2RzMFVzSDFwRlRrdWNFb0lQaG5sR2RsWWdMRUlWN0crV0F4NzRBL0U9Ci0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQo="
+      APP_AUTH_SECRET: "covenant-secret"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck (tsc --noEmit)
+        run: npm run typecheck
+
+      - name: Capability & Security Boundary Audit
+        run: npm run audit
+
+      - name: Verify Committed Run Manifest (demo/run_manifest.json)
+        run: npm run verify -- demo/run_manifest.json
+
+      - name: Run Vitest Suite (267 Tests)
+        run: npm run test
+
+      - name: Run Autonomous Tick Simulation (Lane A & B)
+        run: npm run tick
+
+      - name: Next.js Production Build
+        run: npm run build

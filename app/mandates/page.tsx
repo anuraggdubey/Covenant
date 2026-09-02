@@ -135,6 +135,45 @@ export default function MandateStudioPage() {
     fetchActivePolicy();
   }, []);
 
+  // AI Mandate Copilot state
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiDrafting, setAiDrafting] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  async function handleAiDraft() {
+    if (!aiPrompt.trim()) return;
+    setAiDrafting(true);
+    setAiError(null);
+    try {
+      const res = await fetch("/api/ai/draft-mandate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: aiPrompt.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "AI drafting failed.");
+      
+      const newText = data.mandateText;
+      setMandateText(newText);
+      setSelectedMandate(null);
+      setCompiled(null);
+      setActivationFeedback(null);
+
+      // Auto-compile the AI-drafted mandate
+      const compileRes = await fetch("/api/mandates/compile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mandateText: newText }),
+      });
+      const compileData = await compileRes.json();
+      setCompiled(compileData);
+    } catch (err: unknown) {
+      setAiError(err instanceof Error ? err.message : "AI drafting failed.");
+    } finally {
+      setAiDrafting(false);
+    }
+  }
+
   async function handleCompile() {
     if (!mandateText.trim()) return;
     setCompiling(true);
@@ -308,6 +347,46 @@ export default function MandateStudioPage() {
                     <Sliders className="w-3 h-3" />
                     {showSliders ? "Hide Sliders" : "Configure Dollar Caps"}
                   </button>
+                </div>
+
+                {/* AI Mandate Copilot (Powered by OpenRouter) */}
+                <div className="mb-4 bg-white p-3.5 border border-black/15">
+                  <div className="flex items-center justify-between text-[11px] font-mono font-bold text-[#0B4FFF] mb-2 uppercase tracking-wider">
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#0B4FFF]" />
+                      AI Mandate Copilot · OpenRouter AI
+                    </span>
+                    {aiDrafting && <span className="text-[10px] text-[#74736A] animate-pulse">Drafting structured mandate...</span>}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !aiDrafting) {
+                          e.preventDefault();
+                          handleAiDraft();
+                        }
+                      }}
+                      placeholder="Prompt AI (e.g. 'Conservative SPY credit spreads with $500 max loss per trade')..."
+                      className="flex-1 bg-[#FAF9F5] border border-black/15 px-3 py-1.5 text-xs text-[#232323] placeholder-[#74736A] font-mono focus:outline-none focus:border-[#0B4FFF]"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAiDraft}
+                      disabled={aiDrafting || !aiPrompt.trim()}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0B4FFF] hover:bg-[#093ECC] text-white text-xs font-mono font-bold uppercase disabled:opacity-50 transition-colors cursor-pointer shrink-0"
+                    >
+                      <Sparkles className={`w-3.5 h-3.5 ${aiDrafting ? "animate-spin" : ""}`} />
+                      {aiDrafting ? "Drafting..." : "Draft with AI"}
+                    </button>
+                  </div>
+                  {aiError && (
+                    <div className="mt-2 text-[11px] font-mono text-rose-700 bg-rose-50 p-2 border border-rose-200">
+                      {aiError}
+                    </div>
+                  )}
                 </div>
 
                 <textarea

@@ -107,6 +107,45 @@ export default function CandidateLabPage() {
     }
   };
 
+  // AI Explanations
+  const [aiExplanations, setAiExplanations] = useState<Record<string, string>>({});
+  const [loadingAi, setLoadingAi] = useState<Record<string, boolean>>({});
+
+  const fetchAiExplanation = async (cand: RankedCandidateView) => {
+    if (aiExplanations[cand.id] || loadingAi[cand.id]) return;
+    setLoadingAi((prev) => ({ ...prev, [cand.id]: true }));
+    try {
+      const res = await fetch("/api/ai/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidate: {
+            underlying: selectedUnderlying,
+            underlyingPrice: activeUnderlyingData?.underlyingPrice ?? "500.00",
+            structure: cand.structure,
+            expiry: cand.expiry,
+            dte: cand.dte,
+            limitPrice: cand.limitPrice,
+            maxLoss: cand.standaloneMaxLoss,
+            maxGain: cand.standaloneMaxGain,
+            riskRewardRatio: cand.riskRewardRatio,
+            alphaScore: cand.alphaScore,
+            trend: activeUnderlyingData?.signals.trend,
+            realizedVol: activeUnderlyingData?.signals.realizedVol20d,
+          },
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.explanation) {
+        setAiExplanations((prev) => ({ ...prev, [cand.id]: json.explanation }));
+      }
+    } catch {
+      // Ignore fallback
+    } finally {
+      setLoadingAi((prev) => ({ ...prev, [cand.id]: false }));
+    }
+  };
+
   useEffect(() => {
     fetchCandidates();
   }, []);
@@ -402,9 +441,32 @@ export default function CandidateLabPage() {
                         {/* Left: Thesis & Legs */}
                         <div className="lg:col-span-7 flex flex-col justify-between">
                           <div>
-                            <h3 className="text-xl md:text-2xl font-serif text-[#232323] leading-snug mb-4">
+                            <h3 className="text-xl md:text-2xl font-serif text-[#232323] leading-snug mb-3">
                               {cand.thesis}
                             </h3>
+
+                            {/* AI Risk & Thesis Explainer Button */}
+                            <div className="mb-4">
+                              <button
+                                type="button"
+                                onClick={() => void fetchAiExplanation(cand)}
+                                disabled={loadingAi[cand.id]}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-[#FAF9F5] border border-black/15 text-[11px] font-mono font-bold text-[#0B4FFF] transition-colors cursor-pointer disabled:opacity-50"
+                              >
+                                <Sparkles className={`w-3.5 h-3.5 ${loadingAi[cand.id] ? "animate-spin" : ""}`} />
+                                {loadingAi[cand.id] ? "Analyzing with AI..." : aiExplanations[cand.id] ? "Re-analyze with AI" : "Ask AI to Audit Trade"}
+                              </button>
+
+                              {aiExplanations[cand.id] && (
+                                <div className="mt-2.5 p-3.5 bg-[#EAEEDD] border border-black/15 text-xs font-mono text-[#232323] leading-relaxed">
+                                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#0B4FFF] uppercase tracking-wider mb-1">
+                                    <Sparkles className="w-3 h-3 text-[#0B4FFF]" />
+                                    AI Options Risk Audit · OpenRouter AI
+                                  </div>
+                                  {aiExplanations[cand.id]}
+                                </div>
+                              )}
+                            </div>
 
                             {/* Exact OCC Legs */}
                             <div className="bg-[#FAF9F5] p-4 border border-black/10">

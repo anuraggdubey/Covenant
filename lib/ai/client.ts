@@ -37,14 +37,25 @@ export async function callModelProvider(
   const isGroq =
     env.MODEL_PROVIDER.toLowerCase() === "groq" ||
     apiKey.startsWith("gsk_") ||
-    (Boolean(env.MODEL_NAME) && (env.MODEL_NAME.includes("llama") || env.MODEL_NAME.includes("mixtral") || env.MODEL_NAME.includes("gemma")));
+    (Boolean(env.MODEL_NAME) &&
+      (env.MODEL_NAME.includes("llama") ||
+        env.MODEL_NAME.includes("mixtral") ||
+        env.MODEL_NAME.includes("gemma") ||
+        env.MODEL_NAME.includes("qwen") ||
+        env.MODEL_NAME.includes("gpt-oss")));
 
   const endpoint = isGroq
     ? "https://api.groq.com/openai/v1/chat/completions"
     : "https://openrouter.ai/api/v1/chat/completions";
 
-  const defaultModel = isGroq ? "llama-3.3-70b-versatile" : "nvidia/nemotron-3.5-lightning:free";
-  const modelName = env.MODEL_NAME?.trim() || defaultModel;
+  const defaultModel = isGroq ? "qwen/qwen3.8-27b" : "nvidia/nemotron-3.5-lightning:free";
+  let modelName = env.MODEL_NAME?.trim() || defaultModel;
+
+  // Fallback for decommissioned Groq models
+  if (isGroq && (modelName === "llama-3.3-70b-versatile" || modelName === "llama3-70b-8192" || modelName === "llama3-8b-8192")) {
+    modelName = "qwen/qwen3.8-27b";
+  }
+
   const providerLabel = isGroq ? "Groq" : "OpenRouter";
 
   const controller = new AbortController();
@@ -61,7 +72,7 @@ export async function callModelProvider(
   }
 
   try {
-    const res = await fetch(endpoint, {
+    let res = await fetch(endpoint, {
       method: "POST",
       headers,
       body: JSON.stringify({
@@ -72,6 +83,22 @@ export async function callModelProvider(
       }),
       signal: controller.signal,
     });
+
+    // If Groq returns 404 (model not found / deprecated), automatically retry with active default
+    if (!res.ok && res.status === 404 && isGroq && modelName !== "qwen/qwen3.8-27b") {
+      modelName = "qwen/qwen3.8-27b";
+      res = await fetch(endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          model: modelName,
+          messages,
+          max_tokens: maxTokens,
+          temperature: 0.3,
+        }),
+        signal: controller.signal,
+      });
+    }
 
     if (!res.ok) {
       const errText = await res.text();

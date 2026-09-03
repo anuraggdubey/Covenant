@@ -16,6 +16,11 @@ next-env.d.ts
 # Testing & Coverage
 coverage/
 .vitest/
+test-results/
+playwright-report/
+playwright-cli/
+.playwright-cli/
+blob-report/
 
 # Local Environment & Secrets
 .env
@@ -43,6 +48,20 @@ Thumbs.db
 *.sln
 *.sw?
 
+# AI Agents & IDE Tooling
+.claude/
+.cursor/
+.windsurf/
+.gemini/
+.antigravity/
+.cline/
+.roo/
+
 # Local Runtime Data
 .covenant/
 .neon
+.turbo/
+.vercel/
+*.sqlite
+*.sqlite3
+*.db

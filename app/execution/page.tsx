@@ -238,7 +238,7 @@ export default function ExecutionPage() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="mx-auto max-w-[1400px] px-6 py-12 md:py-16 flex flex-col gap-8"
+        className="mx-auto max-w-[1400px] px-4 md:px-6 py-10 md:py-16 flex flex-col gap-8"
       >
         {/* Header */}
         <motion.div

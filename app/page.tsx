@@ -81,11 +81,11 @@ export default function OverviewPage() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="max-w-[1500px] mx-auto px-6 pt-0 pb-8 md:pt-4 md:pb-12 flex flex-col items-start text-left"
+        className="max-w-[1500px] mx-auto px-4 md:px-6 pt-0 pb-8 md:pt-4 md:pb-12 flex flex-col items-start text-left"
       >
         <motion.h1
           variants={itemVariants}
-          className="text-[72px] md:text-[110px] lg:text-[130px] font-medium text-[#232323] leading-[0.9] tracking-[-0.04em] mb-10 max-w-5xl"
+          className="text-5xl sm:text-[72px] md:text-[110px] lg:text-[130px] font-medium text-[#232323] leading-[0.9] tracking-[-0.04em] mb-10 max-w-5xl"
         >
           The trader,<br />multiplied
         </motion.h1>
@@ -113,7 +113,7 @@ export default function OverviewPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5, duration: 1 }}
-        className="max-w-[1400px] mx-auto px-6 mb-24 md:mb-32 flex flex-col items-start gap-8 overflow-hidden"
+        className="max-w-[1400px] mx-auto px-4 md:px-6 mb-24 md:mb-32 flex flex-col items-start gap-8 overflow-hidden"
       >
         <span className="text-[15px] text-[#74736A] whitespace-nowrap font-medium">
           Executing securely across trusted brokerages
@@ -168,7 +168,7 @@ export default function OverviewPage() {
       </motion.section>
 
       {/* 4. PROBLEM STATEMENT (Dark Section) */}
-      <section className="w-full bg-[#1A1A1A] text-white py-32 md:py-48 px-6">
+      <section className="w-full bg-[#1A1A1A] text-white py-20 md:py-48 px-4 md:px-6">
         <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 md:gap-24 items-start relative">
 
           {/* Left Column: Sticky Headline */}
@@ -178,7 +178,7 @@ export default function OverviewPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: false, margin: "-100px" }}
               transition={{ duration: 0.8 }}
-              className="text-[50px] md:text-[70px] lg:text-[85px] font-medium leading-[0.95] tracking-[-0.03em]"
+              className="text-4xl sm:text-[50px] md:text-[70px] lg:text-[85px] font-medium leading-[1.05] md:leading-[0.95] tracking-[-0.03em]"
             >
               <span className="text-[#74736A]">Trading didn't<br />get harder.</span><br />
               <span className="text-white">It got reckless.</span>
@@ -212,7 +212,7 @@ export default function OverviewPage() {
       </section>
 
       {/* 5. ARCHITECTURE CARD */}
-      <section className="w-full bg-[#F0EFE3] py-24 md:py-32 px-6">
+      <section className="w-full bg-[#F0EFE3] py-16 md:py-32 px-4 md:px-6">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -224,7 +224,7 @@ export default function OverviewPage() {
 
             {/* Left Column */}
             <div className="flex flex-col gap-12">
-              <h2 className="text-[45px] md:text-[60px] lg:text-[70px] leading-[0.95] tracking-[-0.03em] font-medium text-[#232323]">
+              <h2 className="text-4xl sm:text-[45px] md:text-[60px] lg:text-[70px] leading-[0.95] tracking-[-0.03em] font-medium text-[#232323]">
                 The trading stack,<br />modernized
               </h2>
 
@@ -296,7 +296,7 @@ export default function OverviewPage() {
       </section>
 
       {/* 6. METRICS & SCALE (Customer Stories) */}
-      <section className="w-full bg-[#F0EFE3] pb-24 md:pb-32 px-6">
+      <section className="w-full bg-[#F0EFE3] pb-16 md:pb-32 px-4 md:px-6">
         <div className="max-w-[1400px] mx-auto">
 
           <motion.div
@@ -306,7 +306,7 @@ export default function OverviewPage() {
             className="mb-12 md:mb-16"
           >
             <span className="text-[#74736A] text-[15px] mb-4 block">Performance Metrics</span>
-            <h2 className="text-[45px] md:text-[60px] lg:text-[70px] font-medium tracking-tight text-[#232323] leading-none max-w-2xl">
+            <h2 className="text-4xl sm:text-[45px] md:text-[60px] lg:text-[70px] font-medium tracking-tight text-[#232323] leading-none max-w-2xl">
               Mathematically proven at scale
             </h2>
           </motion.div>
@@ -401,7 +401,7 @@ export default function OverviewPage() {
         whileInView={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
         viewport={{ once: false }}
-        className="max-w-[1400px] mx-auto px-6 mb-32"
+        className="max-w-[1400px] mx-auto px-4 md:px-6 mb-32"
       >
         <div className="bg-[#FAF9F5] rounded-[32px] hover:bg-[#0B4FFF] hover:shadow-[0_12px_40px_-12px_rgba(11,79,255,0.3)] transition-all duration-300 p-12 group cursor-default">
           <motion.div
@@ -467,11 +467,11 @@ export default function OverviewPage() {
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: false }}
-        className="max-w-[1400px] mx-auto px-6 mb-32 relative"
+        className="max-w-[1400px] mx-auto px-4 md:px-6 mb-32 relative"
       >
         <div className="text-center mb-16 max-w-4xl mx-auto flex flex-col items-center">
           <h2 className="text-sm uppercase tracking-[0.2em] font-bold text-[#0B4FFF] mb-6">THE PLATFORM</h2>
-          <p className="text-[45px] md:text-[55px] lg:text-[65px] font-medium tracking-tight text-[#232323] leading-[1.05]">
+          <p className="text-3xl sm:text-[45px] md:text-[55px] lg:text-[65px] font-medium tracking-tight text-[#232323] leading-[1.1] md:leading-[1.05]">
             Everything a user needs to inspect before trusting an agent.
           </p>
         </div>
@@ -486,16 +486,15 @@ export default function OverviewPage() {
 
 
       {/* 12. INTERACTIVE FOOTER */}
-      <footer className="relative w-full bg-[#0B4FFF] overflow-hidden min-h-[800px] flex flex-col justify-between pt-24 pb-8">
+      <footer className="relative w-full bg-[#0B4FFF] overflow-hidden min-h-[600px] md:min-h-[800px] flex flex-col justify-between pt-16 md:pt-24 pb-8">
         {/* Interactive Canvas Background */}
         <InteractiveGrid />
 
         {/* Content Container (z-10 to stay above canvas) */}
-        <div className="relative z-10 w-full max-w-[1400px] mx-auto px-6 flex-1 flex flex-col justify-between pointer-events-none">
-
+        <div className="relative z-10 w-full max-w-[1400px] mx-auto px-4 md:px-6 flex-1 flex flex-col justify-between pointer-events-none">
           {/* Top: CTA */}
           <div className="max-w-3xl pointer-events-auto">
-            <h2 className="text-[50px] md:text-[70px] lg:text-[85px] font-medium leading-[0.95] text-white tracking-tight mb-8">
+            <h2 className="text-4xl sm:text-[50px] md:text-[70px] lg:text-[85px] font-medium leading-[1.05] md:leading-[0.95] text-white tracking-tight mb-8">
               Turn every execution into mathematical certainty.
             </h2>
             <div className="flex flex-wrap gap-4">
@@ -545,7 +544,7 @@ export default function OverviewPage() {
           </div>
 
           {/* Bottom: Links Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 text-[#F3F1E7]/80 text-sm pointer-events-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 text-[#F3F1E7]/80 text-sm pointer-events-auto">
             <div className="flex flex-col gap-8 justify-end h-full">
               <div className="text-xs tracking-widest uppercase font-bold text-white/50">
                 © 2026 COVENANT. ALL RIGHTS RESERVED.

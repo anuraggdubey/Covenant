@@ -190,7 +190,7 @@ export function PipelineVisual() {
       </div>
 
       {/* CARDS GRID */}
-      <div className="relative max-w-[1500px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-6 px-6 lg:px-0 mt-8 md:mt-0">
+      <div className="relative max-w-[1500px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-6 px-4 md:px-6 lg:px-0 mt-8 md:mt-0">
         
         {/* Step 1: Compile (Prompt Card) */}
         <div className="relative z-10 flex flex-col items-center">

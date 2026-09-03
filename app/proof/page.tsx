@@ -212,7 +212,7 @@ export default function ProofExplorerPage() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="max-w-[1400px] mx-auto px-6 py-12 md:py-16 flex flex-col gap-8"
+        className="max-w-[1400px] mx-auto px-4 md:px-6 py-10 md:py-16 flex flex-col gap-8"
       >
         {/* Header */}
         <motion.div

@@ -286,7 +286,7 @@ export default function MandateStudioPage() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="max-w-[1400px] mx-auto px-6 py-12 md:py-16 flex flex-col gap-10"
+        className="max-w-[1400px] mx-auto px-4 md:px-6 py-10 md:py-16 flex flex-col gap-10"
       >
         {/* Header */}
         <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-black/15">

@@ -49,8 +49,8 @@ export function SiteFooter() {
 
   return (
     <footer className="bg-[#F0EFE3] border-t border-black/5 mt-32">
-      <div className="max-w-[1400px] mx-auto px-6 py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr_1fr_1fr] gap-12">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-12 md:py-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr] gap-10 md:gap-12">
           <div>
             <Link href="/" className="text-2xl font-extrabold text-[#232323] tracking-tight" aria-label="Covenant home">
               Covenant

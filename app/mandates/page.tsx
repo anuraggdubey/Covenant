@@ -355,7 +355,7 @@ export default function MandateStudioPage() {
                   <div className="flex items-center justify-between text-[11px] font-mono font-bold text-[#0B4FFF] mb-2 uppercase tracking-wider">
                     <span className="flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-[#0B4FFF]" />
-                      AI Mandate Copilot · OpenRouter AI
+                      AI Mandate Copilot · Fast LPU
                     </span>
                     {aiDrafting && <span className="text-[10px] text-[#74736A] animate-pulse">Drafting structured mandate...</span>}
                   </div>

@@ -461,7 +461,7 @@ export default function CandidateLabPage() {
                                 <div className="mt-2.5 p-3.5 bg-[#EAEEDD] border border-black/15 text-xs font-mono text-[#232323] leading-relaxed">
                                   <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#0B4FFF] uppercase tracking-wider mb-1">
                                     <Sparkles className="w-3 h-3 text-[#0B4FFF]" />
-                                    AI Options Risk Audit · OpenRouter AI
+                                    AI Options Risk Audit
                                   </div>
                                   {aiExplanations[cand.id]}
                                 </div>

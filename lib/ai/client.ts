@@ -24,30 +24,46 @@ export interface CandidateContext {
   realizedVol?: number;
 }
 
-export async function callOpenRouter(
+export async function callModelProvider(
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
   maxTokens = 300
 ): Promise<string> {
   const env = getServerEnv();
   const apiKey = env.MODEL_API_KEY;
-  const modelName = env.MODEL_NAME || "nvidia/nemotron-3.5-lightning:free";
-
   if (!apiKey || apiKey.trim().length === 0) {
     throw new Error("MODEL_API_KEY is not configured in environment.");
   }
 
+  const isGroq =
+    env.MODEL_PROVIDER.toLowerCase() === "groq" ||
+    apiKey.startsWith("gsk_") ||
+    (Boolean(env.MODEL_NAME) && (env.MODEL_NAME.includes("llama") || env.MODEL_NAME.includes("mixtral") || env.MODEL_NAME.includes("gemma")));
+
+  const endpoint = isGroq
+    ? "https://api.groq.com/openai/v1/chat/completions"
+    : "https://openrouter.ai/api/v1/chat/completions";
+
+  const defaultModel = isGroq ? "llama-3.3-70b-versatile" : "nvidia/nemotron-3.5-lightning:free";
+  const modelName = env.MODEL_NAME?.trim() || defaultModel;
+  const providerLabel = isGroq ? "Groq" : "OpenRouter";
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), env.MODEL_TIMEOUT_MS || 25000);
 
+  const headers: Record<string, string> = {
+    "Authorization": `Bearer ${apiKey.trim()}`,
+    "Content-Type": "application/json",
+  };
+
+  if (!isGroq) {
+    headers["HTTP-Referer"] = "https://covenant.local";
+    headers["X-Title"] = "Covenant Options Trading Agent";
+  }
+
   try {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const res = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey.trim()}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://covenant.local",
-        "X-Title": "Covenant Options Trading Agent",
-      },
+      headers,
       body: JSON.stringify({
         model: modelName,
         messages,
@@ -59,19 +75,21 @@ export async function callOpenRouter(
 
     if (!res.ok) {
       const errText = await res.text();
-      throw new Error(`OpenRouter error (${res.status}): ${errText.slice(0, 200)}`);
+      throw new Error(`${providerLabel} error (${res.status}): ${errText.slice(0, 200)}`);
     }
 
     const data = await res.json();
     const content = data.choices?.[0]?.message?.content;
     if (!content || typeof content !== "string") {
-      throw new Error("OpenRouter returned an empty response.");
+      throw new Error(`${providerLabel} returned an empty response.`);
     }
     return content;
   } finally {
     clearTimeout(timeoutId);
   }
 }
+
+export const callOpenRouter = callModelProvider;
 
 function cleanAiContent(content: string): string {
   let text = content.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
@@ -114,7 +132,7 @@ CRITICAL INSTRUCTION: Do NOT include any preamble, introduction, or thinking pro
 
   const userPrompt = `Operator instruction: "${prompt}". Output the raw mandate text immediately:`;
 
-  const raw = await callOpenRouter(
+  const raw = await callModelProvider(
     [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
@@ -146,7 +164,7 @@ Quant Alpha Score: ${cand.alphaScore}/100
 Market Trend: ${cand.trend ?? "NEUTRAL"}
 Realized Volatility (20d): ${cand.realizedVol ? `${(cand.realizedVol * 100).toFixed(1)}%` : "N/A"}`;
 
-  const raw = await callOpenRouter(
+  const raw = await callModelProvider(
     [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },

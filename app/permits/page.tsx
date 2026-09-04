@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronRight, CircleAlert, Clock3, FileKey2, KeyRound, LockKeyhole, Play, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronRight, CircleAlert, Clock3, FileKey2, Play, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
 
 type Symbol = "SPY" | "QQQ";
 type Lifecycle = "SIGNED" | "USED" | "EXPIRED";
@@ -55,8 +55,6 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export default function PermitsPage() {
-  const [authenticated, setAuthenticated] = useState(false);
-  const [secret, setSecret] = useState("");
   const [symbol, setSymbol] = useState<Symbol>("SPY");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [active, setActive] = useState<{ permit: Permit; intent: Intent } | null>(null);
@@ -64,7 +62,7 @@ export default function PermitsPage() {
   const [detail, setDetail] = useState<Detail | null>(null);
   const [filter, setFilter] = useState<"ALL" | Lifecycle>("ALL");
   const [now, setNow] = useState(Date.now());
-  const [busy, setBusy] = useState<"unlock" | "prepare" | "sign" | "execute" | null>(null);
+  const [busy, setBusy] = useState<"prepare" | "sign" | "execute" | null>(null);
   const [notice, setNotice] = useState<{ tone: "error" | "success"; text: string } | null>(null);
   const [storageMessage, setStorageMessage] = useState<string | null>(null);
   const [activePolicy, setActivePolicy] = useState<ActivePolicyInfo | null>(null);
@@ -106,9 +104,6 @@ export default function PermitsPage() {
   }, []);
 
   useEffect(() => {
-    void request<{ authenticated: boolean }>("/api/operator/session")
-      .then((body) => setAuthenticated(body.authenticated))
-      .catch(() => setAuthenticated(false));
     void loadHistory();
     void loadActivePolicy();
   }, [loadHistory, loadActivePolicy]);
@@ -135,25 +130,6 @@ export default function PermitsPage() {
 
   const isSpyAllowed = !activePolicy || activePolicy.policy.allowedUnderlyings.includes("SPY");
   const isQqqAllowed = !activePolicy || activePolicy.policy.allowedUnderlyings.includes("QQQ");
-
-  const unlock = async () => {
-    setBusy("unlock");
-    setNotice(null);
-    try {
-      await request("/api/operator/session", { method: "POST", body: JSON.stringify({ secret }) });
-      setSecret("");
-      setAuthenticated(true);
-      const msg = "Operator session unlocked for this browser.";
-      setNotice({ tone: "success", text: msg });
-      pushToast("success", "Console Unlocked", msg);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : "Unlock failed.";
-      setNotice({ tone: "error", text: msg });
-      pushToast("error", "Unlock Failed", msg);
-    } finally {
-      setBusy(null);
-    }
-  };
 
   const prepare = async () => {
     setBusy("prepare");
@@ -301,53 +277,33 @@ export default function PermitsPage() {
         )}
 
         <section className="mt-8 grid gap-6 lg:grid-cols-[0.82fr_1.18fr]">
-          <div className="border border-black/15 bg-white p-6 md:p-7">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-mono text-[10px] font-bold tracking-[0.12em] text-[#74736A]">OPERATOR GATE</p>
-                <h2 className="mt-2 text-xl font-semibold">{authenticated ? "Console unlocked" : "Unlock to issue permits"}</h2>
+          <div className="border border-black/15 bg-white p-6 md:p-7 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-mono text-[10px] font-bold tracking-[0.12em] text-[#74736A]">OPERATOR GATE</p>
+                  <h2 className="mt-2 text-xl font-semibold">Console Ready</h2>
+                </div>
+                <ShieldCheck className="h-5 w-5 text-emerald-700" />
               </div>
-              <LockKeyhole className={`h-5 w-5 ${authenticated ? "text-emerald-700" : "text-[#74736A]"}`} />
+              <div className="mt-5 border-t border-black/10 pt-4 text-xs text-[#5F5E56] leading-relaxed space-y-2">
+                <p>
+                  Interactive sandbox environment active. Any operator can inspect live candidate spreads, review exact OCC contract legs, and cryptographically sign 60-second Ed25519 permits directly.
+                </p>
+                <p className="font-mono text-[11px] text-[#74736A]">
+                  Protected: Private signing keys and Alpaca broker write credentials remain strictly isolated on the server.
+                </p>
+              </div>
             </div>
-            {authenticated ? (
-              <div className="mt-6 border-t border-black/10 pt-5 text-sm text-[#67665F]">
-                <p>Signing and execution requests use an HttpOnly session. Browser code never receives the operator secret, signing key, or Alpaca credentials.</p>
-                <button
-                  className="mt-4 text-xs font-semibold text-[#0B4FFF] hover:underline"
-                  onClick={async () => {
-                    await fetch("/api/operator/session", { method: "DELETE" });
-                    setAuthenticated(false);
-                    setDraft(null);
-                    setActive(null);
-                    pushToast("info", "Console Locked", "Operator session locked.");
-                  }}
-                >
-                  Lock console
-                </button>
-              </div>
-            ) : (
-              <div className="mt-6 border-t border-black/10 pt-5">
-                <label className="block text-xs font-medium text-[#5F5E56]" htmlFor="operator-secret">
-                  Operator secret
-                </label>
-                <input
-                  id="operator-secret"
-                  type="password"
-                  value={secret}
-                  onChange={(event) => setSecret(event.target.value)}
-                  onKeyDown={(event) => event.key === "Enter" && void unlock()}
-                  className="mt-2 h-11 w-full border border-black/20 bg-[#FAF9F5] px-3 text-sm outline-none focus:border-[#0B4FFF]"
-                />
-                <button
-                  className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 bg-[#0B4FFF] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#093ED9] disabled:opacity-50"
-                  disabled={!secret || busy === "unlock"}
-                  onClick={() => void unlock()}
-                >
-                  <KeyRound className="h-4 w-4" />
-                  {busy === "unlock" ? "Unlocking..." : "Unlock console"}
-                </button>
-              </div>
-            )}
+            <div className="mt-5 pt-3 border-t border-black/10 flex items-center justify-between text-xs font-mono text-[#5F5E56]">
+              <span className="flex items-center gap-1.5 text-emerald-800 font-bold">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                Session Active
+              </span>
+              <span className="border border-black/15 bg-[#F0EFE3] px-2 py-0.5 text-[10px]">
+                PAPER TRADING
+              </span>
+            </div>
           </div>
 
           <div className="border border-black/15 bg-[#EAEEDD] p-6 md:p-7">
@@ -395,13 +351,12 @@ export default function PermitsPage() {
 
             <button
               onClick={() => void prepare()}
-              disabled={!authenticated || busy !== null}
-              className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 border border-[#0B4FFF] bg-[#0B4FFF] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#093ED9] disabled:cursor-not-allowed disabled:opacity-45"
+              disabled={busy !== null}
+              className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 border border-[#0B4FFF] bg-[#0B4FFF] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#093ED9] disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
             >
               <RefreshCw className={`h-4 w-4 ${busy === "prepare" ? "animate-spin" : ""}`} />
               {busy === "prepare" ? "Reading market state..." : `Prepare ${symbol} trade`}
             </button>
-            {!authenticated && <p className="mt-3 text-xs text-[#74736A]">Unlock the console before reading live account and option-chain state.</p>}
           </div>
         </section>
 

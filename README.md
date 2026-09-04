@@ -41,6 +41,7 @@ Each page in Covenant serves a single, dedicated role in the governance and exec
 | **Break Me** | [`/break-me`](https://github.com/anuraggdubey/Covenant) | Adversarial fuzzer that stresses policies across 318 generated hostile market scenarios (data outages, volatility spikes, flash crashes). |
 | **Proof Explorer** | [`/proof`](https://github.com/anuraggdubey/Covenant) | Interactive cryptographic verification explorer with clickable SHA-256 hashes, canonical digests, and replay verifier. |
 | **Shadow Ledger** | [`/shadow-ledger`](https://github.com/anuraggdubey/Covenant) | Transparent counterfactual ledger that computes and displays exactly how many dollars each safety invariant saved or cost the portfolio. |
+| **Write-Up** | [`/writeup`](https://github.com/anuraggdubey/Covenant/blob/main/WRITEUP.md) | Official one-page write-up covering AI logic, risk gates, and Alpaca infrastructure implementation. |
 
 ---
 
@@ -150,6 +151,7 @@ Visit `http://localhost:3000` to interact with the full dashboard.
 ## Documentation & Connect
 
 * **GitHub Repository:** [github.com/anuraggdubey/Covenant](https://github.com/anuraggdubey/Covenant)
+* **Architecture Write-Up:** [One-Page Submission Write-Up (AI Logic, Risk Gates & Alpaca)](WRITEUP.md)
 * **Documentation:** [Full Implementation Contract & Architecture](https://github.com/anuraggdubey/Covenant/blob/main/IMPLEMENTATION.md)
 * **Twitter / X:** [@anuraggdubeyy](https://x.com/anuraggdubeyy)
 * **LinkedIn:** [Anurag Dubey](https://www.linkedin.com/in/anurag-dubey-407435349/)

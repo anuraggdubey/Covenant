@@ -455,7 +455,7 @@ Decided now so nobody spends Day 4 re-litigating them.
 | ☐ | Featherless integrated for typed mandate drafting (partner eligibility) | B |
 | ☐ | Live dashboard deployed and reachable by judges | A |
 | ☐ | README states the strategy name and thesis in paragraph one | All |
-| ☐ | One-page write-up: AI logic, risk gates, Alpaca infrastructure | C |
+| ☑ | One-page write-up: AI logic, risk gates, Alpaca infrastructure | C |
 | ☐ | 90-second video opening on the live veto | C |
 | ☐ | Setup under 10 minutes from a fresh clone; cold demo twice | All |
 | ☐ | Up to 5 build-in-public posts tagging @lablabai and @AlpacaHQ | C |

@@ -14,6 +14,7 @@ const PRIMARY_ROUTES = [
   { label: "Execution", path: "/execution" },
   { label: "Proof", path: "/proof" },
   { label: "Shadow Ledger", path: "/shadow-ledger" },
+  { label: "Write-Up", path: "/writeup" },
 ];
 
 export function Navigation() {
